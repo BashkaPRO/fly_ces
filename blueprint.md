@@ -1,249 +1,96 @@
-# 🛩️ Web Flight Simulator Blueprint (JS Only)
+# 🛩️ Web Flight Simulator Blueprint
 
-## 1. Tujuan Proyek
+## 1. Project Objectives
 
-Membangun game flight simulator berbasis web browser dengan fitur: -
-Dunia 3D real-world (terrain) - Kontrol pesawat menggunakan keyboard/mouse - Gaya permainan arcade (Ace Combat 7) - Full JavaScript (tanpa backend wajib)
+Build a web-based flight simulator with the following features:
+- Real-world 3D world (terrain) based on CesiumJS.
+- Arcade-style aircraft controls.
+- Full game flow: Main Menu -> Location Selection -> Simulation.
+- Authentic military HUD UI with custom fonts.
 
 ------------------------------------------------------------------------
 
-## 2. Teknologi Utama
+## 2. Core Technologies
 
-### 2.1 Rendering & Dunia
+### 2.1 Rendering & World
 
 -   **CesiumJS**
-    -   3D globe + terrain real-world
-    -   Terrain provider:
-        -   Cesium World Terrain (default)
-        -   Alternatif: Mapbox Terrain / OpenTopography
+    -   3D globe + real-world terrain.
+    -   Performance optimization using `requestRenderMode`.
 -   **Three.js**
-    -   Model pesawat (GLTF)
-    -   HUD & overlay UI (Ace Combat style)
-    -   Animasi & lighting
+    -   3D aircraft models (GLTF/Custom Mesh).
+    -   Dynamic lighting and atmosphere (Fog, Ambient Lighting).
 
-### 2.2 Kontrol
+### 2.2 UI & UX
+
+-   **Custom Overlay System**
+    -   Main Menu: Start & Options.
+    -   Spawn Mode: Interactive map click selection.
+    -   Pause Menu: ESC/P key support.
+    -   Crash Recovery: Respawn & Restart system.
+
+### 2.3 Controls & Physics
 
 -   **Keyboard Controls**
-    -   W/S/Shift/Ctrl untuk Throttle
-    -   Arrow Keys untuk Pitch & Roll
-    -   A/D untuk Yaw
-
-### 2.3 Physics
-
--   Custom lightweight physics loop
--   Opsional:
-    -   cannon-es
-    -   ammo.js (jika mau collision kompleks)
+    -   W/S/Shift/Ctrl: Throttle Control.
+    -   Arrows: Pitch & Roll.
+    -   A/D: Yaw/Rudder.
+-   **Arcade Physics Loop**
+    -   Custom physics handler in `planePhysics.js`.
+    -   Terrain collision handling.
 
 ------------------------------------------------------------------------
 
-## 3. Struktur Folder Project
+## 3. Project Folder Structure
 
     /web-flight-simulator
     │
     ├── /public
     │   ├── index.html
     │   ├── /assets
-    │   │   ├── plane.glb
-    │   │   ├── skybox/
-    │   │   └── hud/
+    │   │   ├── /fonts (ACES07_Regular.ttf)
+    │   │   ├── /hud
+    │   │   └── /skybox
     │
     ├── /src
-    │   ├── main.js
-    │   ├── config.js
+    │   ├── main.js (Game State Controller)
     │
     │   ├── /world
-    │   │   ├── cesiumWorld.js
-    │   │   └── cameraController.js
+    │   │   ├── cesiumWorld.js (Terrain & Environment)
     │
     │   ├── /plane
-    │   │   ├── planeModel.js
     │   │   ├── planePhysics.js
     │   │   └── planeController.js
     │
-    │   ├── /input
-    │   │   ├── handTracker.js
-    │   │   ├── gestureMapper.js
-    │   │   └── smoothing.js
-    │
     │   ├── /ui
-    │   │   ├── hud.js
-    │   │   └── debugOverlay.js
+    │   │   └── hud.js (Minimap, Compass, Instruments)
     │
     │   └── /utils
-    │       ├── math.js
-    │       ├── filters.js
-    │       └── constants.js
-    │
-    └── package.json
+    │       └── math.js (Flight math)
 
 ------------------------------------------------------------------------
 
-## 4. Alur Sistem
+## 4. Game Flow
 
-    [ Webcam ]
-        ↓
-    MediaPipe Hands
-        ↓
-    gestureMapper.js
-        ↓
-    planeController.js
-        ↓
-    planePhysics.js
-        ↓
-    Three.js Model Update
-        ↓
-    Cesium Camera Sync
+1.  **Main Menu**: User is greeted with a title screen.
+2.  **Spawn Selection**: User picks any coordinate in the world.
+3.  **Transition**: Camera glides smoothly from map into the aircraft.
+4.  **Simulation**: User flies freely with active HUD instruments.
+5.  **Pause/Crash**: Interactive menus to restart or change locations.
 
 ------------------------------------------------------------------------
 
-## 5. Mapping Gesture → Kontrol Pesawat
+## 5. Roadmap & Development
 
-  Gesture / Data Tangan      Kontrol Pesawat
-  -------------------------- -----------------
-  Tangan miring kiri/kanan   Roll
-  Tangan naik/turun          Pitch
-  Rotasi telapak tangan      Yaw
-  Kepalan tangan             Throttle +
-  Telapak terbuka            Throttle -
-  Jarak tangan ke kamera     Zoom / Speed
+-   **Phase 1 (Completed)**: Basic simulation, terrain, and keyboard controls.
+-   **Phase 2 (Completed)**: UI Menu, Spawn Selection, Transitions, and Fonts.
+-   **Phase 3 (Next)**: Integration of MediaPipe Hands for webcam gesture control.
+-   **Phase 4 (Next)**: Engine sound effects, volumetric clouds, and simple mission systems.
 
 ------------------------------------------------------------------------
 
-## 6. Formula Physics Sederhana
+## 6. Target Specifications
 
-``` js
-function updatePlane(dt) {
-  velocity += throttle * enginePower * dt;
-  velocity -= drag * velocity * dt;
+- Modern browser (Chrome/Edge/Firefox) with WebGL 2.0.
+- Hardware with 8GB RAM and stable internet connection (for Cesium terrain data streaming).
 
-  pitchAngle += pitch * pitchRate * dt;
-  rollAngle  += roll  * rollRate  * dt;
-  yawAngle   += yaw   * yawRate   * dt;
-
-  const lift = velocity * velocity * liftFactor;
-  position.y += lift * dt;
-
-  position += forwardVector * velocity * dt;
-}
-```
-
-------------------------------------------------------------------------
-
-## 7. Setup Dunia 3D (CesiumJS)
-
-``` js
-const viewer = new Cesium.Viewer("cesiumContainer", {
-  terrainProvider: Cesium.createWorldTerrain(),
-  timeline: false,
-  animation: false
-});
-
-export function setCameraToPlane(pos, heading, pitch, roll) {
-  viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromDegrees(
-      pos.lon, pos.lat, pos.alt
-    ),
-    orientation: { heading, pitch, roll }
-  });
-}
-```
-
-------------------------------------------------------------------------
-
-## 8. Integrasi MediaPipe Hands
-
-``` js
-const hands = new Hands({
-  locateFile: file =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-});
-
-hands.setOptions({
-  maxNumHands: 1,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.7,
-  minTrackingConfidence: 0.7
-});
-
-hands.onResults(results => {
-  if (results.multiHandLandmarks.length > 0) {
-    processHand(results.multiHandLandmarks[0]);
-  }
-});
-```
-
-------------------------------------------------------------------------
-
-## 9. Smoothing Input (Anti Jitter)
-
-``` js
-export function lowPassFilter(prev, current, alpha = 0.2) {
-  return prev + alpha * (current - prev);
-}
-```
-
-------------------------------------------------------------------------
-
-## 10. Roadmap Pengembangan
-
-### Phase 1 -- MVP
-
--   Cesium globe + terrain
--   Load model pesawat
--   Keyboard control
--   Kamera follow pesawat
-
-### Phase 2 -- Hand Control
-
--   MediaPipe Hands
--   Gesture mapping
--   Input smoothing
--   Debug overlay tangan
-
-### Phase 3 -- Physics & UX
-
--   Lift + drag model
--   HUD speed/altitude
--   Dead zone & kalibrasi
-
-### Phase 4 -- Polish
-
--   Sound engine
--   Clouds / weather
--   Mobile support (optional)
--   Replay mode
-
-------------------------------------------------------------------------
-
-## 11. Catatan Legal & Teknis
-
-❌ Dilarang: - Mengambil atau merender ulang 3D tiles Google Earth
-
-✅ Disarankan: - Cesium World Terrain - Mapbox Terrain - OpenStreetMap
-data
-
-⚠️ Performa: - Batasi draw distance - MediaPipe max 20 FPS - Gunakan LOD
-untuk model pesawat
-
-------------------------------------------------------------------------
-
-## 12. Target Minimum Spesifikasi
-
-  Komponen     Minimum
-  ------------ -------------
-  Browser      Chrome 110+
-  GPU          WebGL 2.0
-  RAM          8 GB
-  Webcam       720p
-  FPS Target   30 FPS
-
-------------------------------------------------------------------------
-
-## 13. Output Akhir yang Diharapkan
-
--   Flight simulator playable di browser
--   Kontrol natural via tangan
--   Dunia real-world (legal)
--   Smooth minimal 30 FPS
--   Modular codebase (mudah dikembangkan)
