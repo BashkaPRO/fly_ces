@@ -13,6 +13,10 @@ export class HUD {
 		window.addEventListener('resize', () => this.resizeMinimap());
 	}
 
+	resetTime() {
+		this.startTime = Date.now();
+	}
+
 	resizeMinimap() {
 		this.minimapCanvas.width = this.minimapCanvas.offsetWidth;
 		this.minimapCanvas.height = this.minimapCanvas.offsetHeight;
@@ -91,7 +95,10 @@ export class HUD {
 	update(state) {
 		// Update Speed & Alt
 		this.speedElem.innerText = Math.round(state.speed).toString().padStart(3, '0');
-		this.altElem.innerText = Math.round(state.alt * 3.28084).toString().padStart(3, '0');
+		
+		// Convert meters to feet, ensure non-negative for display, and use 5 digits for alt
+		const altFeet = Math.max(0, Math.round(state.alt * 3.28084));
+		this.altElem.innerText = altFeet.toString().padStart(5, '0');
 
 		// Update Time
 		const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
@@ -112,9 +119,11 @@ export class HUD {
 	}
 
 	drawMinimap(state) {
+		if (!this.miniCtx || !this.minimapCanvas) return;
+		
 		const ctx = this.miniCtx;
-		const w = this.minimapCanvas.width;
-		const h = this.minimapCanvas.height;
+		const w = this.minimapCanvas.width || 250;
+		const h = this.minimapCanvas.height || 250;
 		const centerX = w / 2;
 		const centerY = h / 2;
 		const radius = Math.min(centerX, centerY) - 10;
@@ -124,10 +133,12 @@ export class HUD {
 		// Rotating part (World)
 		ctx.save();
 		ctx.translate(centerX, centerY);
-		ctx.rotate(-state.heading * Math.PI / 180); // Rotate world opposite to heading
+		
+		const heading = state.heading || 0;
+		ctx.rotate(-heading * Math.PI / 180); // Rotate world opposite to heading
 
 		// Draw background grid
-		ctx.strokeStyle = 'rgba(0, 255, 0, 0.1)';
+		ctx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
 		ctx.lineWidth = 1;
 		const gridSize = 50;
 		const limit = 400; // Large enough area
@@ -146,7 +157,9 @@ export class HUD {
 
 		// Draw Compass Directions
 		ctx.fillStyle = '#0f0';
-		ctx.font = 'bold 16px Courier New';
+		ctx.font = 'bold 18px Courier New';
+		ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+		ctx.shadowBlur = 4;
 		ctx.textAlign = 'center';
 
 		const directions = [

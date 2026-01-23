@@ -15,9 +15,25 @@ export function initCesium() {
 		selectionIndicator: false,
 		navigationHelpButton: false,
 		fullscreenButton: false,
+		shouldAnimate: false, // Don't animate in background
 	});
 
-	// Hide Cesium logo/credit for clean UI (optional but useful for games)
+	// Performance Optimizations
+	viewer.scene.requestRenderMode = true;
+	viewer.scene.maximumRenderTimeChange = Infinity;
+	viewer.scene.globe.maximumScreenSpaceError = 8; // Lower quality for better performance
+	viewer.resolutionScale = 0.8; // Reduce internal resolution slightly
+	
+	// Better Sky and Lighting
+	viewer.scene.globe.enableLighting = true;
+	viewer.scene.highDynamicRange = false;
+	viewer.scene.postProcessStages.fxaa.enabled = true;
+	viewer.scene.skyAtmosphere = new Cesium.SkyAtmosphere();
+	
+	viewer.scene.fog.enabled = true;
+	viewer.scene.fog.density = 0.0001;
+
+	// Hide Cesium logo/credit for clean UI
 	viewer._cesiumWidget._creditContainer.style.display = "none";
 
 	return viewer;
@@ -34,6 +50,9 @@ export function setCameraToPlane(lon, lat, alt, heading, pitch, roll) {
 			roll: Cesium.Math.toRadians(roll)
 		}
 	});
+	
+	// Manually trigger render since requestRenderMode is true
+	viewer.scene.requestRender();
 }
 
 export function getViewer() {
