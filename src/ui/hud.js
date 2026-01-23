@@ -6,8 +6,15 @@ export class HUD {
 		this.scoreElem = document.getElementById('score');
 		this.minimapCanvas = document.getElementById('minimap');
 		this.miniCtx = this.minimapCanvas.getContext('2d');
+		this.uiContainer = document.getElementById('uiContainer');
 
 		this.startTime = Date.now();
+		
+		// Inertia / Smoothing properties
+		this.smoothedPitch = 0;
+		this.smoothedRoll = 0;
+		this.smoothedHeading = 0;
+		
 		this.createHorizon();
 		this.resizeMinimap();
 		window.addEventListener('resize', () => this.resizeMinimap());
@@ -66,7 +73,6 @@ export class HUD {
                 position: absolute;
                 width: 100%;
                 height: 100%;
-                transition: transform 0.05s linear;
             `;
 			
 			// Add some pitch ladder lines
@@ -93,7 +99,36 @@ export class HUD {
 	}
 
 	update(state) {
-		// Update Speed & Alt
+		// 1. Inertia Calculations (Lagged values)
+		const lerpFactor = 0.25; // Lower = more lag/inertia
+		
+		// Handle angle wrapping for smoothing
+		const lerpAngle = (current, target, factor) => {
+			let diff = target - current;
+			while (diff < -180) diff += 360;
+			while (diff > 180) diff -= 360;
+			return current + diff * factor;
+		};
+
+		this.smoothedPitch = this.smoothedPitch + (state.pitch - this.smoothedPitch) * lerpFactor;
+		this.smoothedRoll = lerpAngle(this.smoothedRoll, state.roll, lerpFactor);
+		this.smoothedHeading = lerpAngle(this.smoothedHeading, state.heading || 0, lerpFactor);
+
+		// 2. Semi-3D Effect (Tilt and Offset based on lag)
+		const pitchDiff = state.pitch - this.smoothedPitch;
+		const rollDiff = state.roll - this.smoothedRoll;
+		
+		// Apply perspective tilt to the whole HUD
+		if (this.uiContainer) {
+			const tiltX = pitchDiff * 0.8;    // Tilt up/down
+			const tiltY = -rollDiff * 0.3;   // Tilt left/right
+			const shiftX = -rollDiff * 1.5;  // Slight slide
+			const shiftY = pitchDiff * 3.0;   // Slight slide
+			
+			this.uiContainer.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translate(${shiftX}px, ${shiftY}px)`;
+		}
+
+		// 3. Update Speed & Alt
 		this.speedElem.innerText = Math.round(state.speed).toString().padStart(3, '0');
 		
 		// Convert meters to feet, ensure non-negative for display, and use 5 digits for alt
@@ -107,12 +142,16 @@ export class HUD {
 		const s = elapsed % 60;
 		this.timeElem.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
-		// Update Horizon
+		// 4. Update Horizon (Using smoothed values for "Inertia" look)
 		const pitchLines = document.getElementById('pitch-lines');
 		const horizon = document.getElementById('horizon-container');
 		if (pitchLines && horizon) {
-			horizon.style.transform = `translate(-50%, -50%) rotate(${-state.roll}deg)`;
-			pitchLines.style.transform = `translateY(${state.pitch * 5}px)`;
+			// The ladder rotates and shifts based on physics reality, 
+			// but we use smoothed values if we want the LADDER itself to lag.
+			// Or we use state.* if we want the elements to stay fixed and ONLY the container to lag.
+			// Ace Combat uses slightly lagged elements.
+			horizon.style.transform = `translate(-50%, -50%) rotate(${-this.smoothedRoll}deg)`;
+			pitchLines.style.transform = `translateY(${this.smoothedPitch * 5}px)`;
 		}
 
 		this.drawMinimap(state);
@@ -157,7 +196,7 @@ export class HUD {
 
 		// Draw Compass Directions
 		ctx.fillStyle = '#0f0';
-		ctx.font = 'bold 18px Courier New';
+		ctx.font = 'bold 18px AceCombat';
 		ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
 		ctx.shadowBlur = 4;
 		ctx.textAlign = 'center';

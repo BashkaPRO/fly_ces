@@ -233,15 +233,17 @@ function setupSpawnPicker() {
 					pixelSize: 15,
 					color: Cesium.Color.RED,
 					outlineColor: Cesium.Color.WHITE,
-					outlineWidth: 2
+					outlineWidth: 2,
+					disableDepthTestDistance: Number.POSITIVE_INFINITY
 				},
 				label: {
 					text: "Target Spawn Location",
-					font: "14pt sans-serif",
+					font: "14pt AceCombat",
 					style: Cesium.LabelStyle.FILL_AND_OUTLINE,
 					outlineWidth: 2,
 					verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-					pixelOffset: new Cesium.Cartesian2(0, -20)
+					pixelOffset: new Cesium.Cartesian2(0, -20),
+					disableDepthTestDistance: Number.POSITIVE_INFINITY
 				}
 			});
 
