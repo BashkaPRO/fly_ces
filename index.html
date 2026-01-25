@@ -220,6 +220,30 @@
             box-shadow: 0 0 20px #0f0;
         }
 
+        #respawnBtn {
+            border-color: #f00;
+            color: #f00;
+            animation: blink-red 1s infinite alternate;
+        }
+        
+        #respawnBtn:hover {
+            background: #f00 !important;
+            color: #000 !important;
+            border-color: #f00 !important;
+            box-shadow: 0 0 25px #f00;
+            animation: none;
+        }
+
+        @keyframes blink-red {
+            from { background: rgba(255, 0, 0, 0.1); box-shadow: 0 0 5px #f00; }
+            to { background: rgba(255, 0, 0, 0.6); box-shadow: 0 0 25px #f00; }
+        }
+
+        @keyframes blink-green {
+            from { background: rgba(0, 40, 0, 0.4); box-shadow: 0 0 5px #0f0; }
+            to { background: rgba(0, 255, 0, 0.4); box-shadow: 0 0 20px #0f0; }
+        }
+
         #spawn-instruction {
             font-family: 'AceCombat', sans-serif;
             position: absolute;
@@ -232,6 +256,17 @@
             color: #0f0;
             z-index: 50;
             pointer-events: none;
+        }
+
+        #confirmSpawnBtn {
+            background: rgba(0, 40, 0, 0.8) !important;
+            animation: blink-green 1s infinite alternate;
+        }
+
+        #confirmSpawnBtn:hover {
+            background: #0f0 !important;
+            color: #000 !important;
+            animation: none;
         }
 
         #weapon-container {
@@ -275,7 +310,7 @@
     <!-- Crash Menu -->
     <div id="crashMenu" class="overlay hidden">
         <h2 class="menu-title" style="color: #f00; text-shadow: 0 0 10px #f00;">AIRCRAFT DESTROYED</h2>
-        <button id="respawnBtn" class="menu-btn" style="border-color: #f00; color: #f00;">RESPAWN</button>
+        <button id="respawnBtn" class="menu-btn">RESPAWN</button>
     </div>
 
     <!-- Spawn Instruction -->
