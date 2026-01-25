@@ -309,6 +309,78 @@
             50% { opacity: 0.3; }
             100% { opacity: 1; }
         }
+
+        /* Modal Styles */
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            background: rgba(0, 10, 0, 0.95);
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 20px;
+            z-index: 200;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+            font-family: 'AceCombat', 'Courier New', Courier, monospace;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .modal-title {
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+        .close-modal {
+            background: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            cursor: pointer;
+            padding: 5px 10px;
+            font-family: 'AceCombat', sans-serif;
+        }
+        .close-modal:hover {
+            background: #0f0;
+            color: #000;
+        }
+        .modal-body {
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .modal-body h3 {
+            margin-top: 20px;
+            border-left: 4px solid #0f0;
+            padding-left: 10px;
+        }
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .key { color: #fff; }
+        
+        /* Disabled Button Style */
+        .menu-btn.disabled {
+            border-color: #444;
+            color: #444;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .menu-btn.disabled:hover {
+            background: transparent;
+            color: #444;
+            box-shadow: none;
+        }
     </style>
 </head>
 <body>
@@ -318,8 +390,72 @@
     <!-- Main Menu -->
     <div id="mainMenu" class="overlay">
         <h1 class="menu-title">WEB FLIGHT SIMULATOR</h1>
-        <button id="startBtn" class="menu-btn">START SIMULATION</button>
-        <button id="optionsBtn" class="menu-btn">OPTIONS</button>
+        <button id="startBtn" class="menu-btn">PLAY</button>
+        <button id="optionsBtn" class="menu-btn disabled">OPTIONS</button>
+        <button id="helpBtn" class="menu-btn">HELP</button>
+        <button id="creditsBtn" class="menu-btn">CREDITS</button>
+        <button id="aboutBtn" class="menu-btn">ABOUT ME</button>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal hidden">
+        <div class="modal-header">
+            <div class="modal-title">Flight Manual</div>
+            <button class="close-modal">X</button>
+        </div>
+        <div class="modal-body">
+            <h3>Basic Controls</h3>
+            <div class="control-grid">
+                <div class="key">ARROW UP / DOWN</div><div>Pitch Down / Up</div>
+                <div class="key">ARROW LEFT / RIGHT</div><div>Roll Left / Right</div>
+                <div class="key">A / D</div><div>Yaw (Rudder)</div>
+                <div class="key">W / SHIFT</div><div>Increase Throttle</div>
+                <div class="key">S / CTRL</div><div>Decrease Throttle</div>
+                <div class="key">SPACE</div><div>Afterburner (Boost)</div>
+            </div>
+            <h3>Camera Controls</h3>
+            <div class="control-grid">
+                <div class="key">LEFT DRAG</div><div>Orbit Camera (Spectate)</div>
+            </div>
+            <h3>System</h3>
+            <div class="control-grid">
+                <div class="key">ESC</div><div>Pause Menu</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Credits Modal -->
+    <div id="creditsModal" class="modal hidden">
+        <div class="modal-header">
+            <div class="modal-title">Project Credits</div>
+            <button class="close-modal">X</button>
+        </div>
+        <div class="modal-body" style="text-align: center;">
+            <p>Developed by <strong>Dimar Tarmizi</strong></p>
+            <p>Built with CesiumJS & Three.js</p>
+            <p>3D Model "Low poly F-15" by SIpriv, licensed under CC BY 4.0.
+            <div style="margin-top: 20px; font-size: 12px; color: #888;">
+                VERSION 1.0.0
+            </div>
+        </div>
+    </div>
+
+    <!-- About Me Modal -->
+    <div id="aboutBtnModal" class="modal hidden">
+        <div class="modal-header">
+            <div class="modal-title">Developer Bio</div>
+            <button class="close-modal">X</button>
+        </div>
+        <div class="modal-body">
+            <div style="display: flex; gap: 20px; align-items: flex-start;">
+                <img src="/assets/images/dimar-tarmizi.jpg" alt="Dimar Tarmizi" style="width: 150px; height: 180px; object-fit: cover; border: 2px solid #0f0; background: #000;">
+                <div style="flex: 1;">
+                    <p style="margin-top: 0px;"><strong>Name:</strong> Dimar Tarmizi</p>
+                    <p><strong>Spec:</strong> Full-stack Web Software Engineer</p>
+                    <p style="margin-top: 15px;">Full-stack web engineer focused on building scalable web applications, robust back-end systems, and dynamic front-end interfaces. Experienced in end-to-end development, deployment, server management, and VPS/IaaS environments to ensure performance and reliability.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Pause Menu -->

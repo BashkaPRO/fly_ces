@@ -334,14 +334,54 @@ function animate() {
 }
 
 // UI Handlers
+function setupModalListeners() {
+	const modals = document.querySelectorAll('.modal');
+	
+	const closeAllModals = () => {
+		modals.forEach(m => m.classList.add('hidden'));
+	};
+
+	// Open Modals
+	document.getElementById('helpBtn').onclick = () => {
+		closeAllModals();
+		document.getElementById('helpModal').classList.remove('hidden');
+	};
+
+	document.getElementById('creditsBtn').onclick = () => {
+		closeAllModals();
+		document.getElementById('creditsModal').classList.remove('hidden');
+	};
+
+	document.getElementById('aboutBtn').onclick = () => {
+		closeAllModals();
+		document.getElementById('aboutBtnModal').classList.remove('hidden');
+	};
+
+	// Close Modals
+	document.querySelectorAll('.close-modal').forEach(btn => {
+		btn.onclick = (e) => {
+			e.stopPropagation();
+			btn.closest('.modal').classList.add('hidden');
+		};
+	});
+
+	// Close on click outside
+	window.addEventListener('click', (event) => {
+		if (event.target.classList.contains('modal')) {
+			event.target.classList.add('hidden');
+		}
+	});
+}
+
 document.getElementById('startBtn').onclick = () => {
+	// Close any open modals when starting the game
+	document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
 	mainMenu.classList.add('hidden');
 	enterSpawnPicking(false); // No vignette from main menu
 };
 
-document.getElementById('optionsBtn').onclick = () => {
-	alert('Options: \n- Controls: WASD/Arrows\n- Camera: Follow\n- Sensitivity: 1.0\n(Work in Progress)');
-};
+// Initialize modal listeners
+setupModalListeners();
 
 document.getElementById('resumeBtn').onclick = () => {
 	pauseMenu.classList.add('hidden');
