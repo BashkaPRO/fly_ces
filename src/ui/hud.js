@@ -8,6 +8,23 @@ export class HUD {
 		this.miniCtx = this.minimapCanvas.getContext('2d');
 		this.uiContainer = document.getElementById('uiContainer');
 
+		// Vignette Effect
+		this.vignette = document.createElement('div');
+		this.vignette.id = 'boost-vignette';
+		this.vignette.style.cssText = `
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.8) 150%);
+			pointer-events: none;
+			opacity: 0;
+			transition: opacity 0.3s ease;
+			z-index: 6;
+		`;
+		document.body.appendChild(this.vignette);
+
 		this.startTime = Date.now();
 		
 		// Inertia / Smoothing properties
@@ -137,7 +154,13 @@ export class HUD {
 		this.smoothedRoll = normalizeAngle(this.smoothedRoll);
 		this.smoothedHeading = normalizeAngle(this.smoothedHeading);
 
-		// 2. Semi-3D Effect (Tilt and Offset based on lag)
+		// 2. Boost Effects
+		const isBoosting = state.isBoosting || false;
+		if (this.vignette) {
+			this.vignette.style.opacity = isBoosting ? "1" : "0";
+		}
+
+		// 3. Semi-3D Effect (Tilt and Offset based on lag)
 		// Use shortest distance diff to avoid jumps at 180/-180
 		const pitchDiff = getAngleDiff(state.pitch, this.smoothedPitch);
 		const rollDiff = getAngleDiff(state.roll, this.smoothedRoll);
@@ -155,9 +178,17 @@ export class HUD {
 			const shiftY = Math.max(-maxShift, Math.min(maxShift, pitchDiff * 3.0 + throttleDiff * 15.0));   // Slide with pitch + throttle
 			
 			// Acceleration "Zoom" effect
-			const scale = 1 + (throttleDiff * 0.25); // More pronounced zoom on acceleration
+			const scale = (1 + (throttleDiff * 0.25)) * (isBoosting ? 1.02 : 1); 
 			
-			this.uiContainer.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translate(${shiftX}px, ${shiftY}px) scale(${scale})`;
+			// Boost Shake
+			let shakeX = 0;
+			let shakeY = 0;
+			if (isBoosting) {
+				shakeX = (Math.random() - 0.5) * 5;
+				shakeY = (Math.random() - 0.5) * 5;
+			}
+
+			this.uiContainer.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translate(${shiftX + shakeX}px, ${shiftY + shakeY}px) scale(${scale})`;
 		}
 
 		// 3. Update Speed & Alt

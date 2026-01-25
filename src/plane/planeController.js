@@ -8,11 +8,15 @@ export class PlaneController {
 			throttle: 0,
 			pitch: 0,
 			roll: 0,
-			yaw: 0
+			yaw: 0,
+			boost: false
 		};
 	}
 	
 	update() {
+		// Boost logic
+		this.input.boost = !!this.keys[' '];
+
 		// Throttle logic
 		const accelRate = 0.5;
 		if (this.keys['w'] || this.keys['Shift']) {

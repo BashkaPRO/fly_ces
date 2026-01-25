@@ -42,6 +42,9 @@ let hud = new HUD();
 const BASE_PLANE_POS = new THREE.Vector3(0, -0.8, -3.2);
 let visualOffset = new THREE.Vector3().copy(BASE_PLANE_POS);
 let visualRotation = new THREE.Euler(0, 0, 0);
+let boostRoll = 0;
+let boostRollDirection = 1;
+let lastIsBoosting = false;
 let lastSpeed = 0;
 
 // DOM Elements
@@ -84,10 +87,12 @@ function initThree() {
 		scene.add(planeModel);
 
 		// Fix the model's internal rotation (it was facing sideways)
-		// Most GLB models face +Z (backwards) or +X (sideways)
-		// Based on the screenshot, it was facing the camera (+Z).
-		// We rotate it to face away from the camera (-Z).
 		mesh.rotation.y = Math.PI / 2; 
+
+		// Center the model so it rotates around its fuselage
+		const box = new THREE.Box3().setFromObject(mesh);
+		const center = box.getCenter(new THREE.Vector3());
+		mesh.position.sub(center);
 		
 		// Position relative to camera (Chase View)
 		planeModel.position.copy(BASE_PLANE_POS);
@@ -120,6 +125,7 @@ function update(dt) {
 	state.heading = physicsResult.heading;
 	state.throttle = input.throttle;
 	state.yaw = input.yaw;
+	state.isBoosting = physicsResult.isBoosting;
 
 	const newPos = movePosition(state.lon, state.lat, state.alt, state.heading, state.pitch, state.speed * dt);
 	state.lon = newPos.lon;
@@ -139,20 +145,64 @@ function update(dt) {
 		// 1. Longitudinal (Speed/Accel)
 		const accel = (state.speed - prevSpeed) / dt;
 		// Forward offset (away from camera) on acceleration, backward on braking
-		const targetZ = BASE_PLANE_POS.z - (accel * 0.001); 
+		let targetZ = BASE_PLANE_POS.z - (accel * 0.001); 
+
+		// --- BOOST ANIMATION LOGIC ---
+		let boostZOffset = 0;
+		if (physicsResult.isBoosting) {
+			if (!lastIsBoosting) {
+				boostRollDirection = Math.random() > 0.5 ? 1 : -1;
+			}
+			
+			const T = physicsResult.boostDuration; 
+			const p = Math.max(0, Math.min(1.0, 1.0 - (physicsResult.boostTimeRemaining / T))); 
+
+			const totalRotationRad = Math.PI * 2 * physicsResult.boostRotations * boostRollDirection;
+
+			// Phase 1: Forward Surge (0% - 20%)
+			if (p < 0.2) {
+				const localP = p / 0.2;
+				boostZOffset = -(localP * localP) * 2.0; 
+				boostRoll = 0;
+			} 
+			// Phase 2: Barrel Roll (20% - 80%)
+			else if (p < 0.8) {
+				const localP = (p - 0.2) / 0.6;
+				boostZOffset = -2.0;
+				// Cubic Ease In-Out: slow-fast-slow
+				const easedP = localP < 0.5 
+					? 4 * localP * localP * localP 
+					: 1 - Math.pow(-2 * localP + 2, 3) / 2;
+				// Gunakan perkalian Math.PI * 2 (Satu putaran penuh)
+				boostRoll = easedP * (Math.PI * 2 * physicsResult.boostRotations) * boostRollDirection;
+			} 
+			// Phase 3: Retreat (80% - 100%)
+			else {
+				const localP = (p - 0.8) / 0.2;
+				const easeOut = 1.0 - ((1.0 - localP) * (1.0 - localP));
+				boostZOffset = -2.0 * (1.0 - easeOut);
+				boostRoll = (Math.PI * 2 * physicsResult.boostRotations) * boostRollDirection;
+			}
+		} else {
+			boostRoll = 0;
+			boostZOffset = 0;
+		}
+		lastIsBoosting = physicsResult.isBoosting;
 		
+		targetZ += boostZOffset;
+
 		// 2. Lateral/Vertical (Pitch/Roll/Yaw)
 		// Model shifts slightly in frame when maneuvering
 		const targetX = BASE_PLANE_POS.x - (input.roll * 0.6) - (input.yaw * 0.12);
 		const targetY = BASE_PLANE_POS.y - (input.pitch * 0.1);
 		
 		// 3. Rotation Lag
-		const targetRotZ = THREE.MathUtils.degToRad(-input.roll * 15);
+		let targetRotZ = THREE.MathUtils.degToRad(-input.roll * 15);
 		const targetRotX = THREE.MathUtils.degToRad(input.pitch * 10);
 		const targetRotY = THREE.MathUtils.degToRad(-input.yaw * 4);
 
 		// Smooth transition (Spring-like lerp)
-		const lerpFactor = 5.0 * dt;
+		const lerpFactor = physicsResult.isBoosting ? 3.0 * dt : 5.0 * dt; // Slower lag during boost for effect
 		visualOffset.x += (targetX - visualOffset.x) * lerpFactor;
 		visualOffset.y += (targetY - visualOffset.y) * lerpFactor;
 		visualOffset.z += (targetZ - visualOffset.z) * lerpFactor;
@@ -162,7 +212,7 @@ function update(dt) {
 		visualRotation.y += (targetRotY - visualRotation.y) * lerpFactor;
 
 		planeModel.position.copy(visualOffset);
-		planeModel.rotation.set(visualRotation.x, visualRotation.y, visualRotation.z);
+		planeModel.rotation.set(visualRotation.x, visualRotation.y, visualRotation.z + boostRoll);
 	}
 }
 

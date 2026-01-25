@@ -19,8 +19,23 @@ export class PlanePhysics {
 		this.rollRate = 2.5;  // Radians per second
 		this.yawRate = 0.5;   // Radians per second
 
+		// Boost properties
+		this.isBoosting = false;
+		this.boostTimeRemaining = 0;
+		this.boostDuration = 3.0; // 3 seconds
+		this.boostMultiplier = 1.5;
+		this.boostRotations = 2; // Ubah ke 2 agar lebih jelas terlihat
+		this.boostPressed = false;
+
 		// Internal orientation using a Quaternion to avoid Gimbal Lock
 		this.quaternion = new THREE.Quaternion();
+	}
+
+	boost() {
+		if (this.boostTimeRemaining <= 0) {
+			this.isBoosting = true;
+			this.boostTimeRemaining = this.boostDuration;
+		}
 	}
 
 	reset(lon, lat, alt, heading, pitch, roll) {
@@ -38,10 +53,34 @@ export class PlanePhysics {
 	}
 
 	update(input, dt) {
+		// Handle Boost logic
+		if (this.boostTimeRemaining > 0) {
+			this.boostTimeRemaining -= dt;
+			if (this.boostTimeRemaining <= 0) {
+				this.isBoosting = false;
+				this.boostTimeRemaining = 0;
+			}
+		}
+
+		// Trigger boost from input if requested - One-shot logic
+		if (input.boost) {
+			if (!this.boostPressed && !this.isBoosting) {
+				this.boost();
+			}
+			this.boostPressed = true;
+		} else {
+			this.boostPressed = false;
+		}
+
 		// Throttle / Speed logic - Arcade style
 		this.throttle = input.throttle;
-		const targetSpeed = this.minSpeed + (this.throttle * (this.maxSpeed - this.minSpeed));
-		this.speed += (targetSpeed - this.speed) * dt * 2;
+		let targetSpeed = this.minSpeed + (this.throttle * (this.maxSpeed - this.minSpeed));
+		
+		if (this.isBoosting) {
+			targetSpeed = this.maxSpeed * this.boostMultiplier;
+		}
+
+		this.speed += (targetSpeed - this.speed) * dt * (this.isBoosting ? 4 : 2); // Faster acceleration during boost
 
 		const controlEffectiveness = this.speed > this.minSpeed ? 1 : (this.speed / this.minSpeed);
 
@@ -79,6 +118,10 @@ export class PlanePhysics {
 			pitch: this.pitch,
 			roll: this.roll,
 			heading: this.heading,
+			isBoosting: this.isBoosting,
+			boostTimeRemaining: this.boostTimeRemaining,
+			boostDuration: this.boostDuration,
+			boostRotations: this.boostRotations
 		};
 	}
 }
