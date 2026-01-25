@@ -1,3 +1,5 @@
+import { setMinimapCamera } from '../world/cesiumWorld';
+
 export class HUD {
 	constructor() {
 		this.speedElem = document.getElementById('speed');
@@ -140,6 +142,14 @@ export class HUD {
 		this.smoothedRoll = normalizeAngle(this.smoothedRoll);
 		this.smoothedHeading = normalizeAngle(this.smoothedHeading);
 
+		// Minimap Terrain Update
+		const baseZoom = 1500;
+		const speedFactor = 2;
+		let zoomAlt = baseZoom + (state.speed * speedFactor);
+		if (state.isBoosting) zoomAlt *= 1.2;
+		this.currentZoom = zoomAlt; // Store for 1km grid calculation
+		setMinimapCamera(state.lon, state.lat, zoomAlt, this.smoothedHeading);
+
 		// 2. Boost Effects
 		const isBoosting = state.isBoosting || false;
 		if (this.vignette) {
@@ -223,22 +233,36 @@ export class HUD {
 		const heading = this.smoothedHeading;
 		ctx.rotate(-heading * Math.PI / 180); // Rotate world opposite to heading
 
-		// Draw background grid
-		ctx.strokeStyle = 'rgba(0, 255, 0, 0.2)';
-		ctx.lineWidth = 1;
-		const gridSize = 50;
-		const limit = 400; // Large enough area
-		for (let x = -limit; x <= limit; x += gridSize) {
+		// Draw background grid (1km per square)
+		ctx.strokeStyle = 'rgba(0, 255, 0, 0.4)';
+		ctx.lineWidth = 1.5;
+		
+		// Calculate grid size: 1000m in pixels
+		// Vertical FOV of Cesium is 60 deg, so vertical meters = 2 * zoom * tan(30deg)
+		const verticalMeters = (this.currentZoom || 1500) * 1.1547;
+		const gridSize = (1000 * h) / verticalMeters;
+		
+		const limit = radius * 2; 
+		// Draw from center outwards to ensure center is always an intersection
+		for (let x = 0; x <= limit; x += gridSize) {
+			// Right lines
 			ctx.beginPath();
-			ctx.moveTo(x, -limit);
-			ctx.lineTo(x, limit);
-			ctx.stroke();
+			ctx.moveTo(x, -limit); ctx.lineTo(x, limit); ctx.stroke();
+			// Left lines
+			if (x > 0) {
+				ctx.beginPath();
+				ctx.moveTo(-x, -limit); ctx.lineTo(-x, limit); ctx.stroke();
+			}
 		}
-		for (let y = -limit; y <= limit; y += gridSize) {
+		for (let y = 0; y <= limit; y += gridSize) {
+			// Bottom lines
 			ctx.beginPath();
-			ctx.moveTo(-limit, y);
-			ctx.lineTo(limit, y);
-			ctx.stroke();
+			ctx.moveTo(-limit, y); ctx.lineTo(limit, y); ctx.stroke();
+			// Top lines
+			if (y > 0) {
+				ctx.beginPath();
+				ctx.moveTo(-limit, -y); ctx.lineTo(limit, -y); ctx.stroke();
+			}
 		}
 
 		// Draw Compass Directions
@@ -275,6 +299,7 @@ export class HUD {
 		ctx.translate(centerX, centerY);
 		// Fixed position, fixed "up" rotation
 		ctx.fillStyle = '#0f0';
+		ctx.shadowBlur = 0; // No shadow for player icon
 		ctx.beginPath();
 		ctx.moveTo(0, -12); // Tip
 		ctx.lineTo(8, 10);  // Right wing
@@ -284,7 +309,8 @@ export class HUD {
 		ctx.fill();
 		
 		// Optional circle overlay
-		ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+		ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.arc(0, 0, radius, 0, Math.PI * 2);
 		ctx.stroke();
@@ -293,7 +319,8 @@ export class HUD {
 
 		// Radar sweep effect (Independent of rotation)
 		const sweepTime = (Date.now() / 1500) % 1;
-		ctx.strokeStyle = `rgba(0, 255, 0, ${0.4 * (1 - sweepTime)})`;
+		ctx.strokeStyle = `rgba(0, 255, 0, ${0.6 * (1 - sweepTime)})`;
+		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.arc(centerX, centerY, sweepTime * radius, 0, Math.PI * 2);
 		ctx.stroke();
