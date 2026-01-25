@@ -471,6 +471,23 @@ window.addEventListener('keydown', (e) => {
 	}
 });
 
+// Auto-Pause when switching tabs or windows
+document.addEventListener('visibilitychange', () => {
+	if (document.hidden && currentState === States.FLYING) {
+		currentState = States.PAUSED;
+		uiContainer.classList.add('hidden');
+		pauseMenu.classList.remove('hidden');
+	}
+});
+
+window.addEventListener('blur', () => {
+	if (currentState === States.FLYING) {
+		currentState = States.PAUSED;
+		uiContainer.classList.add('hidden');
+		pauseMenu.classList.remove('hidden');
+	}
+});
+
 const viewer = initCesium();
 initThree();
 setupSpawnPicker();
