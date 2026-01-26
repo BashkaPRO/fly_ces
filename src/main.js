@@ -52,6 +52,7 @@ let currentBoostZOffset = 0;
 let boostRollDirection = 1;
 let lastIsBoosting = false;
 let lastSpeed = 0;
+let initialCameraView = null;
 
 // DOM Elements
 const mainMenu = document.getElementById('mainMenu');
@@ -435,6 +436,27 @@ function enterSpawnPicking(useVignette = true) {
 	}, delay);
 }
 
+function exitSpawnPicking() {
+	spawnInstruction.classList.add('hidden');
+	confirmSpawnBtn.classList.add('hidden');
+	mainMenu.classList.remove('hidden');
+	currentState = States.MENU;
+	
+	setControlsEnabled(false);
+	
+	if (spawnMarker) {
+		const viewer = getViewer();
+		viewer.entities.remove(spawnMarker);
+		spawnMarker = null;
+	}
+
+	const viewer = getViewer();
+	viewer.camera.flyTo({
+		...initialCameraView,
+		duration: 1.5
+	});
+}
+
 // Spawn logic
 function setupSpawnPicker() {
 	const viewer = getViewer();
@@ -561,6 +583,8 @@ window.addEventListener('keydown', (e) => {
 			currentState = States.FLYING;
 			pauseMenu.classList.add('hidden');
 			uiContainer.classList.remove('hidden');
+		} else if (currentState === States.PICK_SPAWN && e.key === 'Escape') {
+			exitSpawnPicking();
 		}
 	}
 });
@@ -583,6 +607,17 @@ window.addEventListener('blur', () => {
 });
 
 const viewer = initCesium();
+
+// Capture initial camera view for returning to menu
+initialCameraView = {
+	destination: viewer.camera.position.clone(),
+	orientation: {
+		heading: viewer.camera.heading,
+		pitch: viewer.camera.pitch,
+		roll: viewer.camera.roll
+	}
+};
+
 initThree();
 setupSpawnPicker();
 
