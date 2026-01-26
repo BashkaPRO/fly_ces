@@ -473,13 +473,14 @@ function setupSpawnPicker() {
 			const lon = Cesium.Math.toDegrees(cartographic.longitude);
 			const lat = Cesium.Math.toDegrees(cartographic.latitude);
 			
-			// Ensure terrain height is at least sea level (0) for safety
-			const terrainHeight = Math.max(0, cartographic.height);
-			
-			// Update pending state
 			state.lon = lon;
 			state.lat = lat;
-			state.alt = terrainHeight + 1500; // Start at ~5000ft (1500m) for breathing room
+			state.alt = Math.max(0, cartographic.height) + 1500;
+			
+			// Refine altitude asynchronously
+			Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
+				.then(([p]) => state.alt = Math.max(0, p.height || 0) + 1500)
+				.catch(() => {});
 			
 			// Visual marker
 			if (spawnMarker) {
