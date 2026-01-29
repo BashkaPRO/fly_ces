@@ -79,10 +79,10 @@ function applySettings() {
 			viewer.resolutionScale = 0.5;
 			viewer.scene.globe.maximumScreenSpaceError = 4;
 		} else if (gameSettings.graphicsQuality === 'medium') {
-			viewer.resolutionScale = 1.0;
+			viewer.resolutionScale = 0.75;
 			viewer.scene.globe.maximumScreenSpaceError = 2;
 		} else {
-			viewer.resolutionScale = window.devicePixelRatio;
+			viewer.resolutionScale = 1.0;
 			viewer.scene.globe.maximumScreenSpaceError = 1.3;
 		}
 
