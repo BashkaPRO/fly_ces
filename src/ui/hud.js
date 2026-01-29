@@ -28,6 +28,8 @@ export class HUD {
 		this.currentShakeX = 0;
 		this.currentShakeY = 0;
 		
+		this.minimapRange = 1; // Default 1km
+		
 		this.createHorizon();
 		this.resizeMinimap();
 		window.addEventListener('resize', () => this.resizeMinimap());
@@ -35,6 +37,10 @@ export class HUD {
 
 	resetTime() {
 		this.startTime = Date.now();
+	}
+
+	setMinimapRange(range) {
+		this.minimapRange = range;
 	}
 
 	resizeMinimap() {
@@ -154,11 +160,11 @@ export class HUD {
 		this.smoothedHeading = normalizeAngle(this.smoothedHeading);
 
 		// Minimap Terrain Update
-		const baseZoom = 1500;
-		const speedFactor = 2;
+		const baseZoom = this.minimapRange * 1500;
+		const speedFactor = this.minimapRange * 2;
 		let zoomAlt = baseZoom + (state.speed * speedFactor);
 		if (state.isBoosting) zoomAlt *= 1.2;
-		this.currentZoom = zoomAlt; // Store for 1km grid calculation
+		this.currentZoom = zoomAlt; // Store for grid calculation
 		setMinimapCamera(state.lon, state.lat, zoomAlt, this.smoothedHeading);
 
 		// 2. Boost Effects
@@ -276,14 +282,15 @@ export class HUD {
 		const heading = this.smoothedHeading;
 		ctx.rotate(-heading * Math.PI / 180); // Rotate world opposite to heading
 
-		// Draw background grid (1km per square)
+		// Draw background grid
 		ctx.strokeStyle = 'rgba(0, 255, 0, 0.4)';
 		ctx.lineWidth = 1.5;
 		
-		// Calculate grid size: 1000m in pixels
+		// Calculate grid size based on range
+		const metersPerGrid = this.minimapRange * 1000;
 		// Vertical FOV of Cesium is 60 deg, so vertical meters = 2 * zoom * tan(30deg)
-		const verticalMeters = (this.currentZoom || 1500) * 1.1547;
-		const gridSize = (1000 * h) / verticalMeters;
+		const verticalMeters = (this.currentZoom || (this.minimapRange * 1500)) * 1.1547;
+		const gridSize = (metersPerGrid * h) / verticalMeters;
 		
 		const limit = radius * 2; 
 		// Draw from center outwards to ensure center is always an intersection

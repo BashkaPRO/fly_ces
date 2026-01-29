@@ -26,7 +26,8 @@ let gameSettings = {
 	fogEffects: true,
 	fov: 75,
 	mouseSensitivity: 0.2,
-	showHud: true
+	showHud: true,
+	minimapRange: 1
 };
 
 // Load settings from localStorage
@@ -57,6 +58,7 @@ function updateSettingsUI() {
 	document.getElementById('sensitivitySlider').value = gameSettings.mouseSensitivity;
 	document.getElementById('sensitivityValue').textContent = gameSettings.mouseSensitivity;
 	document.getElementById('showHud').checked = gameSettings.showHud;
+	document.getElementById('minimapRange').value = gameSettings.minimapRange.toString();
 }
 
 function applySettings() {
@@ -69,6 +71,11 @@ function applySettings() {
 	// Apply mouse sensitivity
 	if (controller) {
 		controller.setSensitivity(gameSettings.mouseSensitivity);
+	}
+
+	// Apply Minimap Range
+	if (hud) {
+		hud.setMinimapRange(gameSettings.minimapRange);
 	}
 
 	// Apply settings to Cesium
@@ -487,6 +494,7 @@ function setupModalListeners() {
 		gameSettings.fov = parseInt(document.getElementById('fovSlider').value);
 		gameSettings.mouseSensitivity = parseFloat(document.getElementById('sensitivitySlider').value);
 		gameSettings.showHud = document.getElementById('showHud').checked;
+		gameSettings.minimapRange = parseInt(document.getElementById('minimapRange').value);
 		
 		saveSettings();
 		applySettings();
