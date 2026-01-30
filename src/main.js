@@ -782,7 +782,8 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 };
 
 window.addEventListener('keydown', (e) => {
-	if (e.key === 'Escape') {
+	const key = e.key.toLowerCase();
+	if (key === 'escape') {
 		const openModals = document.querySelectorAll('.modal:not(.hidden)');
 		if (openModals.length > 0) {
 			openModals.forEach(m => m.classList.add('hidden'));
@@ -790,7 +791,7 @@ window.addEventListener('keydown', (e) => {
 		}
 	}
 
-	if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+	if (key === 'escape' || key === 'p') {
 		if (currentState === States.FLYING) {
 			currentState = States.PAUSED;
 			uiContainer.classList.add('hidden');
@@ -799,7 +800,7 @@ window.addEventListener('keydown', (e) => {
 			currentState = States.FLYING;
 			pauseMenu.classList.add('hidden');
 			uiContainer.classList.remove('hidden');
-		} else if (currentState === States.PICK_SPAWN && e.key === 'Escape') {
+		} else if (currentState === States.PICK_SPAWN && key === 'escape') {
 			exitSpawnPicking();
 		}
 	}
