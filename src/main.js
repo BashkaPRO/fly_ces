@@ -560,6 +560,22 @@ function enterSpawnPicking(useVignette = true) {
 		currentState = States.PICK_SPAWN;
 		confirmSpawnBtn.classList.add('hidden');
 		
+		// Reset search input
+		const searchInput = document.getElementById('locationSearch');
+		const instructionText = document.getElementById('instruction-text');
+		const resultsContainer = document.getElementById('search-results');
+		
+		if (searchInput) {
+			searchInput.value = '';
+			searchInput.style.display = 'none';
+		}
+		if (instructionText) {
+			instructionText.style.display = 'block';
+		}
+		if (resultsContainer) {
+			resultsContainer.style.display = 'none';
+		}
+
 		setControlsEnabled(true);
 		
 		if (spawnMarker) {
@@ -652,6 +668,131 @@ function setupSpawnPicker() {
 			confirmSpawnBtn.classList.remove('hidden');
 		}
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+}
+
+function setupLocationSearch() {
+	const searchInput = document.getElementById('locationSearch');
+	const resultsContainer = document.getElementById('search-results');
+	const instructionText = document.getElementById('instruction-text');
+	const searchToggleBtn = document.getElementById('search-toggle-btn');
+	let debounceTimer;
+
+	if (searchToggleBtn) {
+		searchToggleBtn.onclick = (e) => {
+			e.stopPropagation();
+			const isSearching = searchInput.style.display === 'block';
+			
+			if (isSearching) {
+				searchInput.style.display = 'none';
+				instructionText.style.display = 'block';
+				resultsContainer.style.display = 'none';
+			} else {
+				searchInput.style.display = 'block';
+				instructionText.style.display = 'none';
+				searchInput.focus();
+			}
+		};
+	}
+
+	searchInput.addEventListener('input', (e) => {
+		clearTimeout(debounceTimer);
+		const query = e.target.value.trim();
+		
+		if (query.length < 3) {
+			resultsContainer.style.display = 'none';
+			return;
+		}
+
+		debounceTimer = setTimeout(async () => {
+			try {
+				const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`);
+				const data = await response.json();
+				
+				resultsContainer.innerHTML = '';
+				if (data.length > 0) {
+					data.forEach(item => {
+						const div = document.createElement('div');
+						div.textContent = item.display_name;
+						div.style.padding = '10px';
+						div.style.cursor = 'pointer';
+						div.onclick = () => {
+							const lon = parseFloat(item.lon);
+							const lat = parseFloat(item.lat);
+							
+							const viewer = getViewer();
+							const position = Cesium.Cartesian3.fromDegrees(lon, lat);
+							
+							state.lon = lon;
+							state.lat = lat;
+							state.alt = 1500; 
+
+							// Refine altitude if possible
+							const cartographic = Cesium.Cartographic.fromDegrees(lon, lat);
+							Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
+								.then(([p]) => {
+									state.alt = Math.max(0, p.height || 0) + 1500;
+								})
+								.catch(() => {});
+
+							// Update camera and marker
+							viewer.camera.flyTo({
+                                destination: Cesium.Cartesian3.fromDegrees(lon, lat, 15000),
+                                duration: 1.5
+                            });
+
+							if (spawnMarker) {
+								viewer.entities.remove(spawnMarker);
+							}
+							spawnMarker = viewer.entities.add({
+								position: position,
+								point: {
+									pixelSize: 15,
+									color: Cesium.Color.RED,
+									outlineColor: Cesium.Color.WHITE,
+									outlineWidth: 2,
+									disableDepthTestDistance: Number.POSITIVE_INFINITY
+								},
+								label: {
+									text: item.display_name.split(',')[0],
+									font: "14pt AceCombat",
+									style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+									outlineWidth: 2,
+									verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+									pixelOffset: new Cesium.Cartesian2(0, -20),
+									disableDepthTestDistance: Number.POSITIVE_INFINITY
+								}
+							});
+
+							confirmSpawnBtn.classList.remove('hidden');
+							resultsContainer.style.display = 'none';
+							
+							// Switch back to instruction mode
+							searchInput.style.display = 'none';
+							instructionText.style.display = 'block';
+							searchInput.value = item.display_name;
+						};
+						resultsContainer.appendChild(div);
+					});
+					resultsContainer.style.display = 'block';
+				} else {
+					resultsContainer.style.display = 'none';
+				}
+			} catch (error) {
+				console.error('Search error:', error);
+			}
+		}, 500);
+	});
+
+	// Close results when clicking outside
+	document.addEventListener('click', (e) => {
+		if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target) && !searchToggleBtn.contains(e.target)) {
+			resultsContainer.style.display = 'none';
+			if (searchInput.style.display === 'block') {
+				searchInput.style.display = 'none';
+				instructionText.style.display = 'block';
+			}
+		}
+	});
 }
 
 document.getElementById('confirmSpawnBtn').onclick = () => {
@@ -771,6 +912,7 @@ initialCameraView = {
 
 initThree();
 setupSpawnPicker();
+setupLocationSearch();
 loadSettings(); // Initialization settings
 
 // Ensure everything is hidden at start
