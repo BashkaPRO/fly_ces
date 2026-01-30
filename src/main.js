@@ -336,11 +336,11 @@ function update(dt) {
 		// --- IDLE ANIMATION (Breathe/Float) ---
 		// Add subtle oscillation to make the plane look "alive" when not maneuvering
 		const time = performance.now() * 0.001;
-		const idleX = Math.sin(time * 0.8) * 0.015;
-		const idleY = Math.cos(time * 0.6) * 0.01;
-		const idleRotX = Math.sin(time * 0.5) * 0.005;
-		const idleRotY = Math.cos(time * 0.4) * 0.005;
-		const idleRotZ = Math.sin(time * 0.7) * 0.01;
+		const idleX = Math.sin(time * 0.8) * 0.035;
+		const idleY = Math.cos(time * 0.6) * 0.025;
+		const idleRotX = Math.sin(time * 0.5) * 0.015;
+		const idleRotY = Math.cos(time * 0.4) * 0.015;
+		const idleRotZ = Math.sin(time * 0.7) * 0.025;
 
 		const targetX = input.isDragging ? BASE_PLANE_POS.x : BASE_PLANE_POS.x - (input.roll * 0.6) - (input.yaw * 0.12) + idleX;
 		const targetY = input.isDragging ? BASE_PLANE_POS.y : BASE_PLANE_POS.y - (input.pitch * 0.1) + idleY;
