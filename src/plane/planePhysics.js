@@ -2,8 +2,8 @@ import * as THREE from 'three';
 
 export class PlanePhysics {
 	constructor() {
-		this.speed = 100; // Initial speed
-		this.maxSpeed = 1000; // Ace Combat style speed
+		this.speed = 100;
+		this.maxSpeed = 1000;
 		this.minSpeed = 100;
 		this.throttle = 0.5;
 		this.enginePower = 1.2;
@@ -15,19 +15,17 @@ export class PlanePhysics {
 		this.roll = 0;
 		this.heading = 0;
 
-		this.pitchRate = 1.2; // Radians per second
-		this.rollRate = 2.5;  // Radians per second
-		this.yawRate = 0.5;   // Radians per second
+		this.pitchRate = 1.2;
+		this.rollRate = 2.5;
+		this.yawRate = 0.5;
 
-		// Boost properties
 		this.isBoosting = false;
 		this.boostTimeRemaining = 0;
-		this.boostDuration = 3.0; // 3 seconds
+		this.boostDuration = 3.0;
 		this.boostMultiplier = 1.5;
-		this.boostRotations = 2; // Ubah ke 2 agar lebih jelas terlihat
+		this.boostRotations = 2;
 		this.boostPressed = false;
 
-		// Internal orientation using a Quaternion to avoid Gimbal Lock
 		this.quaternion = new THREE.Quaternion();
 	}
 
@@ -42,7 +40,7 @@ export class PlanePhysics {
 		this.heading = heading || 0;
 		this.pitch = pitch || 0;
 		this.roll = roll || 0;
-		
+
 		const euler = new THREE.Euler(
 			THREE.MathUtils.degToRad(this.pitch),
 			THREE.MathUtils.degToRad(this.heading),
@@ -53,7 +51,6 @@ export class PlanePhysics {
 	}
 
 	update(input, dt) {
-		// Handle Boost logic
 		if (this.boostTimeRemaining > 0) {
 			this.boostTimeRemaining -= dt;
 			if (this.boostTimeRemaining <= 0) {
@@ -62,7 +59,6 @@ export class PlanePhysics {
 			}
 		}
 
-		// Trigger boost from input if requested - One-shot logic
 		if (input.boost) {
 			if (!this.boostPressed && !this.isBoosting) {
 				this.boost();
@@ -72,43 +68,33 @@ export class PlanePhysics {
 			this.boostPressed = false;
 		}
 
-		// Throttle / Speed logic - Arcade style
 		this.throttle = input.throttle;
 		let targetSpeed = this.minSpeed + (this.throttle * (this.maxSpeed - this.minSpeed));
-		
+
 		if (this.isBoosting) {
 			targetSpeed = this.maxSpeed * this.boostMultiplier;
 		}
 
-		this.speed += (targetSpeed - this.speed) * dt * (this.isBoosting ? 4 : 2); // Faster acceleration during boost
+		this.speed += (targetSpeed - this.speed) * dt * (this.isBoosting ? 4 : 2);
 
 		const controlEffectiveness = this.speed > this.minSpeed ? 1 : (this.speed / this.minSpeed);
 
-		// Current rotation rates - Fixed based on feedback
 		const localPitch = input.pitch * this.pitchRate * dt * controlEffectiveness;
 		const localRoll = input.roll * this.rollRate * dt * controlEffectiveness;
 		const localYaw = input.yaw * this.yawRate * dt * controlEffectiveness;
 
-		// Create incremental rotations around LOCAL axes
 		const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), localPitch);
 		const qRoll = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), localRoll);
 		const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), localYaw);
 
-		// Combine: Multiply existing quaternion by local rotations
-		// Sequence: Yaw -> Pitch -> Roll (Standard flight dynamics)
 		this.quaternion.multiply(qYaw);
 		this.quaternion.multiply(qPitch);
 		this.quaternion.multiply(qRoll);
 
-		// Normalize to prevent numerical drift
 		this.quaternion.normalize();
 
-		// Convert Quaternion back to Heading, Pitch, Roll for Cesium
-		// We use YXZ: Y is Heading, X is Pitch, Z is Roll
 		const euler = new THREE.Euler().setFromQuaternion(this.quaternion, 'YXZ');
-		
-		// Map Euler to flight angles (In Degrees)
-		// Three.js Euler 'YXZ' -> y is Heading, x is Pitch, z is Roll
+
 		this.heading = THREE.MathUtils.radToDeg(euler.y);
 		this.pitch = THREE.MathUtils.radToDeg(euler.x);
 		this.roll = THREE.MathUtils.radToDeg(euler.z);

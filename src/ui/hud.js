@@ -15,12 +15,10 @@ export class HUD {
 		this.compassTape = document.getElementById('compass-tape');
 		this.headingDisplay = document.getElementById('heading-display');
 
-		// Shared Vignette Effect (from index.html)
 		this.vignette = document.getElementById('transition-vignette');
 
 		this.startTime = Date.now();
-		
-		// Inertia / Smoothing properties
+
 		this.smoothedPitch = 0;
 		this.smoothedRoll = 0;
 		this.smoothedHeading = 0;
@@ -29,9 +27,9 @@ export class HUD {
 		this.smoothedBoostScale = 1.0;
 		this.currentShakeX = 0;
 		this.currentShakeY = 0;
-		
-		this.minimapRange = 1; // Default 1km
-		
+
+		this.minimapRange = 1;
+
 		this.createHorizon();
 		this.createCompass();
 		this.resizeMinimap();
@@ -40,43 +38,40 @@ export class HUD {
 
 	createCompass() {
 		if (!this.compassTape) return;
-		
-		// Create ticks and labels for -360 to 720 (3 full circles)
-		// This ensures that we never run out of tape regardless of wrapping
-		const step = 5; 
+
+		const step = 5;
 		const pixelsPerDegree = 4;
-		
-		this.compassTape.innerHTML = ''; // Clear for rebuild
-		
+
+		this.compassTape.innerHTML = '';
+
 		for (let i = -360; i <= 720; i += step) {
 			const tick = document.createElement('div');
 			tick.className = 'compass-tick';
-			
+
 			const isMajor = i % 10 === 0;
 			const isCardinal = i % 90 === 0;
-			
+
 			tick.style.left = `${(i + 360) * pixelsPerDegree}px`;
 			tick.style.height = isMajor ? (isCardinal ? '15px' : '10px') : '5px';
-			
+
 			if (isMajor) {
 				const label = document.createElement('div');
 				label.className = 'compass-label';
 				label.style.left = `${(i + 360) * pixelsPerDegree}px`;
-				
-				// Normalize i to 0-359 for labels
+
 				let degree = i % 360;
 				if (degree < 0) degree += 360;
-				
+
 				let text = Math.round(degree).toString().padStart(3, '0');
 				if (Math.round(degree) === 0 || Math.round(degree) === 360) text = 'N';
 				else if (Math.round(degree) === 90) text = 'E';
 				else if (Math.round(degree) === 180) text = 'S';
 				else if (Math.round(degree) === 270) text = 'W';
-				
+
 				label.innerText = text;
 				this.compassTape.appendChild(label);
 			}
-			
+
 			this.compassTape.appendChild(tick);
 		}
 	}
@@ -105,61 +100,60 @@ export class HUD {
 			const horizon = document.createElement('div');
 			horizon.id = 'horizon-container';
 			horizon.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: 600px;
-                height: 600px;
-                transform: translate(-50%, -50%);
-                pointer-events: none;
-                overflow: hidden;
-            `;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				width: 600px;
+				height: 600px;
+				transform: translate(-50%, -50%);
+				pointer-events: none;
+				overflow: hidden;
+			`;
 
 			const crosshair = document.createElement('div');
 			crosshair.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: 40px;
-                height: 2px;
-                background: #0f0;
-                transform: translate(-50%, -50%);
-            `;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				width: 40px;
+				height: 2px;
+				background: #0f0;
+				transform: translate(-50%, -50%);
+			`;
 			const innerCross = document.createElement('div');
 			innerCross.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: 2px;
-                height: 10px;
-                background: #0f0;
-                transform: translate(-50%, -50%);
-            `;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				width: 2px;
+				height: 10px;
+				background: #0f0;
+				transform: translate(-50%, -50%);
+			`;
 			crosshair.appendChild(innerCross);
 			horizon.appendChild(crosshair);
 
 			const pitchLines = document.createElement('div');
 			pitchLines.id = 'pitch-lines';
 			pitchLines.style.cssText = `
-                position: absolute;
-                width: 100%;
-                height: 100%;
-            `;
-			
-			// Add some pitch ladder lines
+				position: absolute;
+				width: 100%;
+				height: 100%;
+			`;
+
 			for (let i = -90; i <= 90; i += 10) {
 				if (i === 0) continue;
 				const line = document.createElement('div');
 				line.style.cssText = `
-                    position: absolute;
-                    left: 30%;
-                    width: 40%;
-                    height: 1px;
-                    background: rgba(0, 255, 0, 0.5);
-                    top: ${50 - i}% ;
-                    text-align: center;
-                    font-size: 10px;
-                `;
+					position: absolute;
+					left: 30%;
+					width: 40%;
+					height: 1px;
+					background: rgba(0, 255, 0, 0.5);
+					top: ${50 - i}% ;
+					text-align: center;
+					font-size: 10px;
+				`;
 				line.innerText = i;
 				pitchLines.appendChild(line);
 			}
@@ -170,10 +164,8 @@ export class HUD {
 	}
 
 	update(state) {
-		// 1. Inertia Calculations (Lagged values)
-		const lerpFactor = 0.5; // Lower = more lag/inertia
-		
-		// Handle angle wrapping for smoothing
+		const lerpFactor = 0.5;
+
 		const lerpAngle = (current, target, factor) => {
 			let diff = target - current;
 			while (diff < -180) diff += 360;
@@ -197,60 +189,49 @@ export class HUD {
 		this.smoothedPitch = lerpAngle(this.smoothedPitch, state.pitch, lerpFactor);
 		this.smoothedRoll = lerpAngle(this.smoothedRoll, state.roll, lerpFactor);
 		this.smoothedHeading = lerpAngle(this.smoothedHeading, state.heading || 0, lerpFactor);
-		this.smoothedThrottle = this.smoothedThrottle + ((state.throttle || 0) - this.smoothedThrottle) * (lerpFactor * 0.4); // More inertia for throttle
+		this.smoothedThrottle = this.smoothedThrottle + ((state.throttle || 0) - this.smoothedThrottle) * (lerpFactor * 0.4);
 		this.smoothedYaw = this.smoothedYaw + ((state.yaw || 0) - this.smoothedYaw) * lerpFactor;
 
-		// Keep smoothed values normalized to prevent drift
 		this.smoothedPitch = normalizeAngle(this.smoothedPitch);
 		this.smoothedRoll = normalizeAngle(this.smoothedRoll);
 		this.smoothedHeading = normalizeAngle(this.smoothedHeading);
 
-		// Minimap Terrain Update
 		const baseZoom = this.minimapRange * 1500;
 		const speedFactor = this.minimapRange * 2;
 		let zoomAlt = baseZoom + (state.speed * speedFactor);
 		if (state.isBoosting) zoomAlt *= 1.2;
-		this.currentZoom = zoomAlt; // Store for grid calculation
+		this.currentZoom = zoomAlt;
 		setMinimapCamera(state.lon, state.lat, zoomAlt, this.smoothedHeading);
 
-		// 2. Boost Effects
 		const isBoosting = state.isBoosting || false;
 		if (this.vignette) {
 			this.vignette.style.opacity = isBoosting ? "1" : "0";
 		}
 
-		// 3. Semi-3D Effect (Tilt and Offset based on lag)
-		// Use shortest distance diff to avoid jumps at 180/-180
 		const pitchDiff = getAngleDiff(state.pitch, this.smoothedPitch);
 		const rollDiff = getAngleDiff(state.roll, this.smoothedRoll);
 		const yawDiff = (state.yaw || 0) - this.smoothedYaw;
 		const throttleDiff = (state.throttle || 0) - this.smoothedThrottle;
-		
-		// Apply perspective tilt to the whole HUD
+
 		if (this.uiContainer) {
-			const maxTilt = 15; // Limit tilt to prevent extreme distortion
-			const tiltX = Math.max(-maxTilt, Math.min(maxTilt, pitchDiff * 0.8));    // Tilt up/down
-			const tiltY = Math.max(-maxTilt, Math.min(maxTilt, -rollDiff * 0.3 + yawDiff * 5.0));   // Tilt left/right (Roll + Yaw)
-			
+			const maxTilt = 15;
+			const tiltX = Math.max(-maxTilt, Math.min(maxTilt, pitchDiff * 0.8));
+			const tiltY = Math.max(-maxTilt, Math.min(maxTilt, -rollDiff * 0.3 + yawDiff * 5.0));
+
 			const maxShift = 50;
-			const shiftX = Math.max(-maxShift, Math.min(maxShift, -rollDiff * 1.5 - yawDiff * 20.0));  // Slight slide (Roll + Yaw)
-			const shiftY = Math.max(-maxShift, Math.min(maxShift, pitchDiff * 3.0 + throttleDiff * 15.0));   // Slide with pitch + throttle
-			
-			// Smooth Boost Scale Transition
+			const shiftX = Math.max(-maxShift, Math.min(maxShift, -rollDiff * 1.5 - yawDiff * 20.0));
+			const shiftY = Math.max(-maxShift, Math.min(maxShift, pitchDiff * 3.0 + throttleDiff * 15.0));
+
 			const targetBoostScale = isBoosting ? 1.02 : 1.0;
 			this.smoothedBoostScale = this.smoothedBoostScale + (targetBoostScale - this.smoothedBoostScale) * 0.1;
 
-			// Acceleration "Zoom" effect
-			const scale = (1 + (throttleDiff * 0.25)) * this.smoothedBoostScale; 
-			
-			// Smoother Boost Shake (Time-based sine waves)
+			const scale = (1 + (throttleDiff * 0.25)) * this.smoothedBoostScale;
+
 			if (isBoosting) {
 				const time = Date.now() * 0.05;
-				// Mixing multiple frequencies for more organic jitter
 				this.currentShakeX = Math.sin(time * 1.5) * 2 + Math.cos(time * 2.1) * 1.5;
 				this.currentShakeY = Math.cos(time * 1.7) * 2 + Math.sin(time * 2.3) * 1.5;
 			} else {
-				// Rapidly decay shake when booster ends
 				this.currentShakeX *= 0.85;
 				this.currentShakeY *= 0.85;
 			}
@@ -258,18 +239,16 @@ export class HUD {
 			this.uiContainer.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translate(${shiftX + this.currentShakeX}px, ${shiftY + this.currentShakeY}px) scale(${scale})`;
 		}
 
-		// 3. Update Speed & Alt & Heading
 		this.speedElem.innerText = Math.round(state.speed).toString().padStart(3, '0');
-		
-		// Heading mapping: state.heading is already Navigation-style (CW, N=0, E=90)
-		let compassHeading = this.smoothedHeading; 
+
+		let compassHeading = this.smoothedHeading;
 		while (compassHeading < 0) compassHeading += 360;
 		while (compassHeading >= 360) compassHeading -= 360;
 
 		if (this.headingDisplay) {
 			let displayHeading = Math.round(compassHeading);
 			if (displayHeading === 360) displayHeading = 0;
-			
+
 			let cardinal = '';
 			if (displayHeading >= 337.5 || displayHeading < 22.5) cardinal = 'N';
 			else if (displayHeading >= 22.5 && displayHeading < 67.5) cardinal = 'NE';
@@ -279,35 +258,29 @@ export class HUD {
 			else if (displayHeading >= 202.5 && displayHeading < 247.5) cardinal = 'SW';
 			else if (displayHeading >= 247.5 && displayHeading < 292.5) cardinal = 'W';
 			else if (displayHeading >= 292.5 && displayHeading < 337.5) cardinal = 'NW';
-			
+
 			this.headingDisplay.innerText = `${displayHeading.toString().padStart(3, '0')} ${cardinal}`;
 		}
 
 		if (this.compassTape) {
 			const pixelsPerDegree = 4;
-			const centerOffset = 160; // Half of 320px container
-			// Our tape starts at -360 deg at 0px.
-			// To center compassHeading, we use (compassHeading - (-360)) * pixelsPerDegree
+			const centerOffset = 160;
 			const targetPosOnTape = (compassHeading + 360) * pixelsPerDegree;
 			const offset = centerOffset - targetPosOnTape;
 			this.compassTape.style.transform = `translateX(${offset}px)`;
 		}
 
-		// Convert meters to feet, ensure non-negative for display, and use 5 digits for alt
 		const altFeet = Math.max(0, Math.round(state.alt * 3.28084));
 		this.altElem.innerText = altFeet.toString().padStart(5, '0');
 
-		// Update Time
 		const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
 		const h = Math.floor(elapsed / 3600);
 		const m = Math.floor((elapsed % 3600) / 60);
 		const s = elapsed % 60;
 		this.timeElem.innerText = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 
-		// Update Local DateTime & Coordinates
 		const now = new Date();
 		const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-		// Calculate timezone offset (rounded longitude / 15 degrees per hour)
 		const tzOffsetHours = Math.round((state.lon || 0) / 15);
 		const localDate = new Date(utc + (3600000 * tzOffsetHours));
 
@@ -318,7 +291,7 @@ export class HUD {
 			const hh = localDate.getHours().toString().padStart(2, '0');
 			const min = localDate.getMinutes().toString().padStart(2, '0');
 			const ss = localDate.getSeconds().toString().padStart(2, '0');
-			
+
 			this.localDateTimeElem.innerText = `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}Z`;
 		}
 
@@ -328,12 +301,9 @@ export class HUD {
 			this.coordsElem.innerText = `POS: ${Math.abs(state.lat).toFixed(4)}°${latDir} ${Math.abs(state.lon).toFixed(4)}°${lonDir}`;
 		}
 
-		// 4. Update Horizon (Using smoothed values for "Inertia" look)
 		const pitchLines = document.getElementById('pitch-lines');
 		const horizon = document.getElementById('horizon-container');
 		if (pitchLines && horizon) {
-			// The ladder rotates and shifts based on physics reality, 
-			// but we use smoothed values if we want the LADDER itself to lag.
 			horizon.style.transform = `translate(-50%, -50%) rotate(${-this.smoothedRoll}deg)`;
 			pitchLines.style.transform = `translateY(${this.smoothedPitch * 6}px)`;
 		}
@@ -343,7 +313,7 @@ export class HUD {
 
 	drawMinimap(state) {
 		if (!this.miniCtx || !this.minimapCanvas) return;
-		
+
 		const ctx = this.miniCtx;
 		const w = this.minimapCanvas.width || 250;
 		const h = this.minimapCanvas.height || 250;
@@ -353,47 +323,37 @@ export class HUD {
 
 		ctx.clearRect(0, 0, w, h);
 
-		// Rotating part (World)
 		ctx.save();
 		ctx.translate(centerX, centerY);
-		
-		const heading = this.smoothedHeading;
-		ctx.rotate(-heading * Math.PI / 180); // Rotate world opposite to heading
 
-		// Draw background grid
+		const heading = this.smoothedHeading;
+		ctx.rotate(-heading * Math.PI / 180);
+
 		ctx.strokeStyle = 'rgba(0, 255, 0, 0.4)';
 		ctx.lineWidth = 1.5;
-		
-		// Calculate grid size based on range
+
 		const metersPerGrid = this.minimapRange * 1000;
-		// Vertical FOV of Cesium is 60 deg, so vertical meters = 2 * zoom * tan(30deg)
 		const verticalMeters = (this.currentZoom || (this.minimapRange * 1500)) * 1.1547;
 		const gridSize = (metersPerGrid * h) / verticalMeters;
-		
-		const limit = radius * 2; 
-		// Draw from center outwards to ensure center is always an intersection
+
+		const limit = radius * 2;
 		for (let x = 0; x <= limit; x += gridSize) {
-			// Right lines
 			ctx.beginPath();
 			ctx.moveTo(x, -limit); ctx.lineTo(x, limit); ctx.stroke();
-			// Left lines
 			if (x > 0) {
 				ctx.beginPath();
 				ctx.moveTo(-x, -limit); ctx.lineTo(-x, limit); ctx.stroke();
 			}
 		}
 		for (let y = 0; y <= limit; y += gridSize) {
-			// Bottom lines
 			ctx.beginPath();
 			ctx.moveTo(-limit, y); ctx.lineTo(limit, y); ctx.stroke();
-			// Top lines
 			if (y > 0) {
 				ctx.beginPath();
 				ctx.moveTo(-limit, -y); ctx.lineTo(limit, -y); ctx.stroke();
 			}
 		}
 
-		// Draw Compass Directions
 		ctx.fillStyle = '#0f0';
 		ctx.font = 'bold 18px AceCombat';
 		ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
@@ -411,32 +371,28 @@ export class HUD {
 			const rad = dir.angle * Math.PI / 180;
 			const dx = Math.sin(rad) * radius;
 			const dy = -Math.cos(rad) * radius;
-			
+
 			ctx.save();
 			ctx.translate(dx, dy);
-			// Rotate text back so it's always upright
-			ctx.rotate(this.smoothedHeading * Math.PI / 180); 
+			ctx.rotate(this.smoothedHeading * Math.PI / 180);
 			ctx.fillText(dir.label, 0, 5);
 			ctx.restore();
 		});
 
 		ctx.restore();
 
-		// Static part (Player Icon) - Always facing up
 		ctx.save();
 		ctx.translate(centerX, centerY);
-		// Fixed position, fixed "up" rotation
 		ctx.fillStyle = '#0f0';
-		ctx.shadowBlur = 0; // No shadow for player icon
+		ctx.shadowBlur = 0;
 		ctx.beginPath();
-		ctx.moveTo(0, -12); // Tip
-		ctx.lineTo(8, 10);  // Right wing
-		ctx.lineTo(0, 5);   // Tail inner
-		ctx.lineTo(-8, 10); // Left wing
+		ctx.moveTo(0, -12);
+		ctx.lineTo(8, 10);
+		ctx.lineTo(0, 5);
+		ctx.lineTo(-8, 10);
 		ctx.closePath();
 		ctx.fill();
-		
-		// Optional circle overlay
+
 		ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
 		ctx.lineWidth = 2;
 		ctx.beginPath();
@@ -445,7 +401,6 @@ export class HUD {
 
 		ctx.restore();
 
-		// Radar sweep effect (Independent of rotation)
 		const sweepTime = (Date.now() / 1500) % 1;
 		ctx.strokeStyle = `rgba(0, 255, 0, ${0.6 * (1 - sweepTime)})`;
 		ctx.lineWidth = 2;
