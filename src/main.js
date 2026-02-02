@@ -223,17 +223,20 @@ async function initSounds() {
 	soundManager.init(camera);
 
 	await Promise.all([
-		soundManager.loadSound('boost', '/assets/sounds/boost.wav', false, 0.35),
+		soundManager.loadSound('boost', '/assets/sounds/boost.wav', false, 0.4),
+		soundManager.loadSound('boost-2', '/assets/sounds/boost-2.wav', false, 0.5),
 		soundManager.loadSound('throttle', '/assets/sounds/throttle.wav', false, 0.4),
 		soundManager.loadSound('explode', '/assets/sounds/explode.wav', false, 0.5),
 		soundManager.loadSound('jet-engine', '/assets/sounds/jet-engine.wav', true, 0.3),
 		soundManager.loadSound('spawn', '/assets/sounds/spawn.wav', false, 0.5),
-		soundManager.loadSound('roll', '/assets/sounds/roll.wav', true, 0.75),
-		soundManager.loadSound('pitch', '/assets/sounds/pitch.wav', true, 0.75),
+		soundManager.loadSound('roll', '/assets/sounds/roll.wav', true, 0.5),
+		soundManager.loadSound('pitch', '/assets/sounds/pitch.wav', true, 0.5),
 		soundManager.loadSound('button-click', '/assets/sounds/button-click.mp3', false, 1.0),
 		soundManager.loadSound('button-hover', '/assets/sounds/button-hover.mp3', false, 0.25),
 		soundManager.loadSound('zoom-in', '/assets/sounds/zoom-in.mp3', false, 0.5),
-		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 1.0)
+		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 1.0),
+		soundManager.loadSound('warning', '/assets/sounds/warning.wav', true, 0.5),
+		soundManager.loadSound('pull-up', '/assets/sounds/terrain-pull-up.wav', true, 0.5)
 	]);
 
 	loadingStatus.audio = true;
@@ -244,10 +247,13 @@ async function initSounds() {
 function stopAllFlyingSounds(fadeOut = 0.5) {
 	soundManager.stop('jet-engine', fadeOut);
 	soundManager.stop('boost', fadeOut);
+	soundManager.stop('boost-2', fadeOut);
 	soundManager.stop('roll', fadeOut);
 	soundManager.stop('pitch', fadeOut);
 	soundManager.stop('throttle', fadeOut);
 	soundManager.stop('background', fadeOut);
+	soundManager.stop('warning', fadeOut);
+	soundManager.stop('pull-up', fadeOut);
 }
 
 function setupButtonSounds() {
@@ -373,8 +379,8 @@ function update(dt) {
 	if (soundManager.isPlaying('jet-engine')) {
 		const minSpeed = 100;
 		const maxSpeed = 1000;
-		const minVol = 0.20;
-		const maxVol = 0.35;
+		const minVol = 0.10;
+		const maxVol = 0.25;
 		const speedFactor = Math.max(0, Math.min(1.0, (state.speed - minSpeed) / (maxSpeed - minSpeed)));
 		const engineVol = minVol + speedFactor * (maxVol - minVol);
 		soundManager.setVolume('jet-engine', engineVol);
@@ -382,6 +388,7 @@ function update(dt) {
 
 	if (state.isBoosting && !lastIsBoosting) {
 		soundManager.play('boost');
+		soundManager.play('boost-2');
 	}
 
 	if (state.throttle > lastThrottleLevel + 0.01) {
@@ -532,30 +539,49 @@ function update(dt) {
 	}
 }
 
-let lastCrashCheck = 0;
 let flightStartTime = 0;
 
-function checkCrash() {
-	if (currentState !== States.FLYING) return;
-
-	const now = Date.now();
-	if (now - lastCrashCheck < 100) return;
-	lastCrashCheck = now;
-
-	if (now - flightStartTime < 3000) return;
-
+function getAccurateHeight(lon, lat) {
 	const viewer = getViewer();
-	if (!viewer) return;
+	if (!viewer) return 0;
+	const carto = Cesium.Cartographic.fromDegrees(lon, lat);
+	const carte = Cesium.Cartesian3.fromDegrees(lon, lat);
 
-	const cartographic = Cesium.Cartographic.fromDegrees(state.lon, state.lat);
-	const terrainHeight = viewer.scene.globe.getHeight(cartographic);
+	let h = viewer.scene.globe.getHeight(carto) || 0;
 
-	if (terrainHeight !== undefined && state.alt <= terrainHeight + 5) {
+	if (viewer.scene.sampleHeightSupported) {
+		try {
+			const sh = viewer.scene.sampleHeight(carte);
+			if (sh !== undefined && sh > -1000) h = sh;
+		} catch (e) { }
+	}
+	return h;
+}
+
+function checkCrash() {
+	if (currentState !== States.FLYING || (Date.now() - flightStartTime < 2000)) return;
+
+	const terrainHeight = getAccurateHeight(state.lon, state.lat);
+	const heightAboveGround = state.alt - terrainHeight;
+
+	const isDescending = state.pitch < -5;
+	const isDangerouslyLow = heightAboveGround < 150 && state.pitch < 2;
+	const shouldPullUp = (heightAboveGround < 500 && isDescending) || isDangerouslyLow;
+	
+	hud.setPullUpWarning(shouldPullUp);
+
+	if (shouldPullUp) {
+		soundManager.play('pull-up');
+	} else {
+		soundManager.stop('pull-up');
+	}
+
+	if (state.alt <= terrainHeight + 5) {
 		currentState = States.CRASHED;
 		uiContainer.classList.add('hidden');
 		threeContainer.classList.add('hidden');
 		crashMenu.classList.remove('hidden');
-
+		hud.setPullUpWarning(false);
 		soundManager.play('explode');
 		stopAllFlyingSounds(0.1);
 	}
@@ -780,11 +806,7 @@ function setupSpawnPicker() {
 
 			state.lon = lon;
 			state.lat = lat;
-			state.alt = Math.max(0, cartographic.height) + 1500;
-
-			Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
-				.then(([p]) => state.alt = Math.max(0, p.height || 0) + 1500)
-				.catch(() => { });
+			state.alt = 2000;
 
 			if (spawnMarker) {
 				viewer.entities.remove(spawnMarker);
@@ -873,14 +895,7 @@ function setupLocationSearch() {
 
 							state.lon = lon;
 							state.lat = lat;
-							state.alt = 1500;
-
-							const cartographic = Cesium.Cartographic.fromDegrees(lon, lat);
-							Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
-								.then(([p]) => {
-									state.alt = Math.max(0, p.height || 0) + 1500;
-								})
-								.catch(() => { });
+							state.alt = 2000;
 
 							viewer.camera.flyTo({
 								destination: Cesium.Cartesian3.fromDegrees(lon, lat, 15000),
@@ -959,6 +974,8 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 
 		setControlsEnabled(false);
 
+		const groundH = getAccurateHeight(state.lon, state.lat);
+		state.alt = groundH + 1500;
 		state.speed = 100;
 		state.pitch = 0;
 		state.roll = 0;
@@ -1006,7 +1023,7 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 				if (vignette) vignette.style.opacity = '0';
 			}
 		});
-	}, 500);
+	}, 1000);
 };
 
 window.addEventListener('keydown', (e) => {
@@ -1024,6 +1041,7 @@ window.addEventListener('keydown', (e) => {
 			currentState = States.PAUSED;
 			uiContainer.classList.add('hidden');
 			pauseMenu.classList.remove('hidden');
+			hud.setPullUpWarning(false);
 			stopAllFlyingSounds(0.3);
 		} else if (currentState === States.PAUSED) {
 			currentState = States.FLYING;

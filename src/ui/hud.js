@@ -19,6 +19,8 @@ export class HUD {
 		this.regionNameElem = document.getElementById('region-name');
 		this.regionTimeout = null;
 
+		this.pullUpElem = document.getElementById('pull-up-warning');
+
 		this.vignette = document.getElementById('transition-vignette');
 
 		this.startTime = Date.now();
@@ -104,6 +106,16 @@ export class HUD {
 				this.regionTimeout = null;
 			}, 1000);
 		}, 4000);
+	}
+
+	setPullUpWarning(shouldShow) {
+		if (this.pullUpElem) {
+			if (shouldShow) {
+				this.pullUpElem.classList.remove('hidden');
+			} else {
+				this.pullUpElem.classList.add('hidden');
+			}
+		}
 	}
 
 	resizeMinimap() {

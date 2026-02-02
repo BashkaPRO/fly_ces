@@ -21,7 +21,7 @@ export class PlanePhysics {
 
 		this.isBoosting = false;
 		this.boostTimeRemaining = 0;
-		this.boostDuration = 3.0;
+		this.boostDuration = 2.5;
 		this.boostMultiplier = 1.5;
 		this.boostRotations = 2;
 		this.boostPressed = false;
