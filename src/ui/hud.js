@@ -15,6 +15,10 @@ export class HUD {
 		this.compassTape = document.getElementById('compass-tape');
 		this.headingDisplay = document.getElementById('heading-display');
 
+		this.regionNotif = document.getElementById('region-notification');
+		this.regionNameElem = document.getElementById('region-name');
+		this.regionTimeout = null;
+
 		this.vignette = document.getElementById('transition-vignette');
 
 		this.startTime = Date.now();
@@ -82,6 +86,24 @@ export class HUD {
 
 	setMinimapRange(range) {
 		this.minimapRange = range;
+	}
+
+	showRegion(name) {
+		if (this.regionTimeout) {
+			clearTimeout(this.regionTimeout);
+		}
+
+		this.regionNameElem.innerText = name;
+		this.regionNotif.classList.remove('hidden');
+		this.regionNotif.classList.remove('region-exit');
+
+		this.regionTimeout = setTimeout(() => {
+			this.regionNotif.classList.add('region-exit');
+			this.regionTimeout = setTimeout(() => {
+				this.regionNotif.classList.add('hidden');
+				this.regionTimeout = null;
+			}, 1000);
+		}, 4000);
 	}
 
 	resizeMinimap() {

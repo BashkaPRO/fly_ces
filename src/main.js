@@ -4,6 +4,7 @@ import { initCesium, setCameraToPlane, getViewer, setControlsEnabled, setRenderO
 import { PlanePhysics } from './plane/planePhysics';
 import { PlaneController } from './plane/planeController';
 import { movePosition } from './utils/math';
+import { calculateDistance, reverseGeocode } from './world/regions';
 import { HUD } from './ui/hud';
 import { JetFlame } from './plane/jetFlame';
 import { soundManager } from './utils/soundManager';
@@ -125,6 +126,12 @@ let state = {
 	speed: 0,
 	throttle: 0
 };
+
+let currentRegionName = null;
+let lastGeocodeTime = 0;
+let lastGeocodePos = { lon: 0, lat: 0 };
+const GEOCODE_INTERVAL = 10000; // Check name every 10 seconds
+const GEOCODE_MIN_DIST = 1000;   // Or every 1km
 
 let scene, camera, renderer;
 let planeModel;
@@ -340,6 +347,22 @@ function update(dt) {
 	state.lon = newPos.lon;
 	state.lat = newPos.lat;
 	state.alt = newPos.alt;
+
+	// Dynamic Region Detection logic (Reverse Geocoding)
+	const nowTime = Date.now();
+	const distFromLast = calculateDistance(state.lon, state.lat, lastGeocodePos.lon, lastGeocodePos.lat);
+
+	if (nowTime - lastGeocodeTime > GEOCODE_INTERVAL || distFromLast > GEOCODE_MIN_DIST) {
+		lastGeocodeTime = nowTime;
+		lastGeocodePos = { lon: state.lon, lat: state.lat };
+
+		reverseGeocode(state.lon, state.lat).then(name => {
+			if (name && name !== currentRegionName) {
+				currentRegionName = name;
+				hud.showRegion(name);
+			}
+		});
+	}
 
 	checkCrash();
 
@@ -936,6 +959,9 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 		state.pitch = 0;
 		state.roll = 0;
 		state.heading = 0;
+		currentRegionName = null;
+		lastGeocodeTime = 0;
+		lastGeocodePos = { lon: 0, lat: 0 };
 
 		visualOffset.copy(BASE_PLANE_POS);
 		visualRotation.set(0, 0, 0);
