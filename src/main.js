@@ -770,8 +770,10 @@ function exitSpawnPicking() {
 	stopAllFlyingSounds(0.3);
 	spawnInstruction.classList.add('hidden');
 	confirmSpawnBtn.classList.add('hidden');
+	loadingIndicator.classList.add('hidden');
 	mainMenu.classList.remove('hidden');
 	currentState = States.MENU;
+	updateLoadingUI();
 	setRenderOptimization(true);
 
 	setControlsEnabled(false);
@@ -1104,10 +1106,12 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener((queueLength) => {
 			if (queueLength > 0) {
 				loadingText.textContent = "Loading Terrain...";
 				loadingIndicator.classList.remove('hidden');
-			} else {
+			} else if (loadingText.textContent === "Loading Terrain...") {
 				loadingIndicator.classList.add('hidden');
 			}
 		} else if (currentState === States.FLYING || currentState === States.TRANSITIONING) {
+			loadingIndicator.classList.add('hidden');
+		} else if (currentState === States.MENU && loadingText.textContent === "Loading Terrain...") {
 			loadingIndicator.classList.add('hidden');
 		}
 	}
