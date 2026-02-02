@@ -812,3 +812,48 @@ input[type="range"]::-webkit-slider-thumb {
 	transform: translateX(-50%);
 	z-index: 100;
 }
+
+.loading-container {
+	position: absolute;
+	right: 40px;
+	bottom: 40px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	background: rgba(0, 0, 0, 0.6);
+	padding: 10px 20px;
+	border-radius: 4px;
+	pointer-events: none;
+	transition: opacity 0.5s ease;
+}
+
+.loading-container.hidden {
+	opacity: 0;
+}
+
+.spinner {
+	width: 24px;
+	height: 24px;
+	border: 3px solid rgba(0, 255, 0, 0.3);
+	border-top: 3px solid #0f0;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+	color: #0f0;
+	font-size: 16px;
+	text-shadow: 0 0 5px #0f0;
+	text-transform: uppercase;
+}
+
+.menu-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	filter: grayscale(1);
+}

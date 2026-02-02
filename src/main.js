@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { initCesium, setCameraToPlane, getViewer, setControlsEnabled } from './world/cesiumWorld';
+import { initCesium, setCameraToPlane, getViewer, setControlsEnabled, setRenderOptimization } from './world/cesiumWorld';
 import { PlanePhysics } from './plane/planePhysics';
 import { PlaneController } from './plane/planeController';
 import { movePosition } from './utils/math';
@@ -158,6 +158,55 @@ const confirmSpawnBtn = document.getElementById('confirmSpawnBtn');
 
 let spawnMarker = null;
 
+const startBtn = document.getElementById('startBtn');
+
+const loadingIndicator = document.getElementById('loadingIndicator');
+const loadingText = document.getElementById('loadingText');
+
+const loadingStatus = {
+	audio: false,
+	model: false,
+	cesium: false,
+	globe: false,
+	failed: false
+};
+
+function updateLoadingUI() {
+	if (!loadingIndicator || !loadingText || !startBtn) return;
+
+	let msg = "";
+	const isAllLoaded = loadingStatus.audio && loadingStatus.model && loadingStatus.cesium && loadingStatus.globe;
+
+	if (loadingStatus.failed) {
+		msg = "Loading Failed. Please Refresh.";
+	} else if (!isAllLoaded) {
+		if (!loadingStatus.audio) msg = "Loading Audio...";
+		else if (!loadingStatus.model) msg = "Loading Aircraft Model...";
+		else if (!loadingStatus.cesium) msg = "Loading Satellite Imagery...";
+		else if (!loadingStatus.globe) msg = "Loading Globe Surface...";
+	}
+
+	if (msg) {
+		loadingText.textContent = msg;
+		startBtn.disabled = true;
+		startBtn.style.pointerEvents = "none";
+		loadingIndicator.classList.remove('hidden');
+
+		if (loadingStatus.failed) {
+			loadingText.style.color = "#f00";
+			const spinner = loadingIndicator.querySelector('.spinner');
+			if (spinner) {
+				spinner.style.borderColor = "rgba(255, 0, 0, 0.3)";
+				spinner.style.borderTopColor = "#f00";
+			}
+		}
+	} else {
+		loadingIndicator.classList.add('hidden');
+		startBtn.disabled = false;
+		startBtn.style.pointerEvents = "auto";
+	}
+}
+
 async function initSounds() {
 	soundManager.init(camera);
 
@@ -175,6 +224,8 @@ async function initSounds() {
 		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 1.0)
 	]);
 
+	loadingStatus.audio = true;
+	updateLoadingUI();
 	setupButtonSounds();
 }
 
@@ -262,6 +313,9 @@ function initThree() {
 			action.clampWhenFinished = true;
 			action.play();
 		}
+
+		loadingStatus.model = true;
+		updateLoadingUI();
 	}, undefined, (error) => {
 		console.error('Error loading model:', error);
 	});
@@ -598,6 +652,7 @@ document.getElementById('restartBtn').onclick = () => {
 };
 
 document.getElementById('quitBtn').onclick = () => {
+	setRenderOptimization(true);
 	location.reload();
 };
 
@@ -609,7 +664,7 @@ document.getElementById('respawnBtn').onclick = () => {
 function enterSpawnPicking(useVignette = true) {
 	stopAllFlyingSounds(0.3);
 	soundManager.play('zoom-in');
-	soundManager.play('background', 1.0); // Ambient background sound
+	soundManager.play('background', 1.0);
 	const vignette = document.getElementById('transition-vignette');
 	if (useVignette && vignette) vignette.style.opacity = '1';
 
@@ -664,6 +719,7 @@ function exitSpawnPicking() {
 	confirmSpawnBtn.classList.add('hidden');
 	mainMenu.classList.remove('hidden');
 	currentState = States.MENU;
+	setRenderOptimization(true); // Continuous rendering for menu/loading
 
 	setControlsEnabled(false);
 
@@ -898,6 +954,7 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 		confirmSpawnBtn.classList.add('hidden');
 
 		currentState = States.TRANSITIONING;
+		setRenderOptimization(false); // Optimize for flight
 
 		viewer.camera.flyTo({
 			destination: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt),
@@ -969,6 +1026,29 @@ window.addEventListener('blur', () => {
 
 const viewer = initCesium();
 
+loadingStatus.cesium = true;
+updateLoadingUI();
+
+let globeLoadingStarted = false;
+const unregisterGlobeTracker = viewer.scene.postRender.addEventListener(() => {
+	const tilesLoaded = viewer.scene.globe.tilesLoaded;
+
+	if (!tilesLoaded) {
+		globeLoadingStarted = true;
+	}
+
+	if (tilesLoaded) {
+		const surface = viewer.scene.globe._surface;
+		const hasTiles = surface && surface._tilesToRender && surface._tilesToRender.length > 0;
+
+		if (hasTiles) {
+			loadingStatus.globe = true;
+			updateLoadingUI();
+			unregisterGlobeTracker();
+		}
+	}
+});
+
 const resumeAudio = () => {
 	if (soundManager.listener.context.state === 'suspended') {
 		soundManager.listener.context.resume();
@@ -996,6 +1076,7 @@ loadSettings();
 uiContainer.classList.add('hidden');
 threeContainer.classList.add('hidden');
 
+updateLoadingUI();
 animate();
 
 window.addEventListener('resize', () => {

@@ -42,8 +42,8 @@ export function initCesium() {
 	});
 
 	[viewer, miniViewer].forEach(v => {
-		v.scene.requestRenderMode = true;
-		v.scene.maximumRenderTimeChange = Infinity;
+		v.scene.requestRenderMode = false;
+		v.scene.maximumRenderTimeChange = 0;
 		v.scene.globe.maximumScreenSpaceError = 2;
 		v.resolutionScale = 0.75;
 
@@ -89,6 +89,15 @@ export function initCesium() {
 	setControlsEnabled(false);
 
 	return viewer;
+}
+
+export function setRenderOptimization(isMenu) {
+	if (!viewer || !miniViewer) return;
+
+	[viewer, miniViewer].forEach(v => {
+		v.scene.requestRenderMode = !isMenu;
+		v.scene.maximumRenderTimeChange = !isMenu ? Infinity : 0;
+	});
 }
 
 export function setControlsEnabled(enabled) {
