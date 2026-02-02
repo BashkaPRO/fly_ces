@@ -27,6 +27,7 @@ let gameSettings = {
 	fov: 75,
 	mouseSensitivity: 0.2,
 	showHud: true,
+	soundEnabled: true,
 	minimapRange: 1
 };
 
@@ -57,6 +58,7 @@ function updateSettingsUI() {
 	document.getElementById('sensitivitySlider').value = gameSettings.mouseSensitivity;
 	document.getElementById('sensitivityValue').textContent = gameSettings.mouseSensitivity;
 	document.getElementById('showHud').checked = gameSettings.showHud;
+	document.getElementById('soundEnabled').checked = gameSettings.soundEnabled;
 	document.getElementById('minimapRange').value = gameSettings.minimapRange.toString();
 }
 
@@ -72,6 +74,10 @@ function applySettings() {
 
 	if (hud) {
 		hud.setMinimapRange(gameSettings.minimapRange);
+	}
+
+	if (soundManager && soundManager.listener) {
+		soundManager.listener.setMasterVolume(gameSettings.soundEnabled ? 1.0 : 0.0);
 	}
 
 	const viewer = getViewer();
@@ -547,6 +553,7 @@ function setupModalListeners() {
 		gameSettings.fov = parseInt(document.getElementById('fovSlider').value);
 		gameSettings.mouseSensitivity = parseFloat(document.getElementById('sensitivitySlider').value);
 		gameSettings.showHud = document.getElementById('showHud').checked;
+		gameSettings.soundEnabled = document.getElementById('soundEnabled').checked;
 		gameSettings.minimapRange = parseInt(document.getElementById('minimapRange').value);
 
 		saveSettings();
