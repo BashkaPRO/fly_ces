@@ -5,7 +5,7 @@ export class HUD {
 		this.speedElem = document.getElementById('speed');
 		this.altElem = document.getElementById('altitude');
 		this.timeElem = document.getElementById('time');
-		this.scoreElem = document.getElementById('score');
+		this.aircraftElem = document.getElementById('aircraft');
 		this.fpsElem = document.getElementById('fps');
 		this.localDateTimeElem = document.getElementById('local-datetime');
 		this.coordsElem = document.getElementById('coords');
