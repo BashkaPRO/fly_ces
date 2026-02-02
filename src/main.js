@@ -169,9 +169,10 @@ async function initSounds() {
 		soundManager.loadSound('spawn', '/assets/sounds/spawn.wav', false, 0.5),
 		soundManager.loadSound('roll', '/assets/sounds/roll.wav', true, 0.75),
 		soundManager.loadSound('pitch', '/assets/sounds/pitch.wav', true, 0.75),
-		soundManager.loadSound('button-click', '/assets/sounds/button-click.mp3', false, 0.5),
-		soundManager.loadSound('button-hover', '/assets/sounds/button-hover.mp3', false, 0.5),
-		soundManager.loadSound('zoom-in', '/assets/sounds/zoom-in.mp3', false, 0.5)
+		soundManager.loadSound('button-click', '/assets/sounds/button-click.mp3', false, 1.0),
+		soundManager.loadSound('button-hover', '/assets/sounds/button-hover.mp3', false, 0.25),
+		soundManager.loadSound('zoom-in', '/assets/sounds/zoom-in.mp3', false, 0.5),
+		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 0.3)
 	]);
 
 	setupButtonSounds();
@@ -183,6 +184,7 @@ function stopAllFlyingSounds(fadeOut = 0.5) {
 	soundManager.stop('roll', fadeOut);
 	soundManager.stop('pitch', fadeOut);
 	soundManager.stop('throttle', fadeOut);
+	soundManager.stop('background', fadeOut);
 }
 
 function setupButtonSounds() {
@@ -607,6 +609,7 @@ document.getElementById('respawnBtn').onclick = () => {
 function enterSpawnPicking(useVignette = true) {
 	stopAllFlyingSounds(0.3);
 	soundManager.play('zoom-in');
+	soundManager.play('background', 1.0); // Ambient background sound
 	const vignette = document.getElementById('transition-vignette');
 	if (useVignette && vignette) vignette.style.opacity = '1';
 
@@ -655,6 +658,7 @@ function enterSpawnPicking(useVignette = true) {
 
 function exitSpawnPicking() {
 	soundManager.play('zoom-in');
+	soundManager.stop('background', 0.5);
 	stopAllFlyingSounds(0.3);
 	spawnInstruction.classList.add('hidden');
 	confirmSpawnBtn.classList.add('hidden');
@@ -938,6 +942,7 @@ window.addEventListener('keydown', (e) => {
 			pauseMenu.classList.add('hidden');
 			uiContainer.classList.remove('hidden');
 			soundManager.play('jet-engine', 0.5);
+			soundManager.play('background', 1.0);
 		} else if (currentState === States.PICK_SPAWN && key === 'escape') {
 			exitSpawnPicking();
 		}
