@@ -559,7 +559,7 @@ function getAccurateHeight(lon, lat) {
 }
 
 function checkCrash() {
-	if (currentState !== States.FLYING || (Date.now() - flightStartTime < 2000)) return;
+	if (currentState !== States.FLYING || (Date.now() - flightStartTime < 3000)) return;
 
 	const terrainHeight = getAccurateHeight(state.lon, state.lat);
 	const heightAboveGround = state.alt - terrainHeight;
@@ -567,7 +567,7 @@ function checkCrash() {
 	const isDescending = state.pitch < -5;
 	const isDangerouslyLow = heightAboveGround < 150 && state.pitch < 2;
 	const shouldPullUp = (heightAboveGround < 500 && isDescending) || isDangerouslyLow;
-	
+
 	hud.setPullUpWarning(shouldPullUp);
 
 	if (shouldPullUp) {
@@ -590,7 +590,8 @@ function checkCrash() {
 function animate() {
 	requestAnimationFrame(animate);
 
-	const dt = clock ? clock.getDelta() : 0.016;
+	let dt = clock ? clock.getDelta() : 0.016;
+	if (dt > 0.1) dt = 0.1;
 	const now = performance.now();
 
 	frameCount++;
@@ -796,7 +797,7 @@ function setupSpawnPicker() {
 	const viewer = getViewer();
 	const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
-	handler.setInputAction(async (click) => {
+	handler.setInputAction((click) => {
 		if (currentState !== States.PICK_SPAWN) return;
 
 		const ray = viewer.camera.getPickRay(click.position);
@@ -810,17 +811,7 @@ function setupSpawnPicker() {
 			state.lon = lon;
 			state.lat = lat;
 			state.alt = 2000;
-
-			const instructionText = document.getElementById('instruction-text');
-			if (instructionText) {
-				instructionText.textContent = "IDENTIFYING LOCATION...";
-				const locationName = await reverseGeocode(lon, lat);
-				if (locationName && currentState === States.PICK_SPAWN) {
-					instructionText.textContent = "LOCATION: " + locationName;
-				} else if (currentState === States.PICK_SPAWN) {
-					instructionText.textContent = "SPAWN POINT SELECTED";
-				}
-			}
+			state.groundHeight = cartographic.height;
 
 			if (spawnMarker) {
 				viewer.entities.remove(spawnMarker);
@@ -835,7 +826,7 @@ function setupSpawnPicker() {
 					disableDepthTestDistance: Number.POSITIVE_INFINITY
 				},
 				label: {
-					text: "Target Spawn Location",
+					text: "TARGET SPAWN LOCATION",
 					font: "14pt AceCombat",
 					style: Cesium.LabelStyle.FILL_AND_OUTLINE,
 					outlineWidth: 2,
@@ -846,6 +837,25 @@ function setupSpawnPicker() {
 			});
 
 			confirmSpawnBtn.classList.remove('hidden');
+
+			const instructionText = document.getElementById('instruction-text');
+			if (instructionText) {
+				instructionText.textContent = "IDENTIFYING LOCATION...";
+
+				const captureLon = lon;
+				const captureLat = lat;
+
+				reverseGeocode(captureLon, captureLat).then(locationName => {
+					if (currentState === States.PICK_SPAWN && state.lon === captureLon && state.lat === captureLat) {
+						if (locationName) {
+							instructionText.textContent = "LOCATION: " + locationName;
+							if (spawnMarker) spawnMarker.label.text = locationName;
+						} else {
+							instructionText.textContent = "SPAWN POINT SELECTED";
+						}
+					}
+				});
+			}
 		}
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
@@ -905,11 +915,13 @@ function setupLocationSearch() {
 							const lat = parseFloat(item.lat);
 
 							const viewer = getViewer();
-							const position = Cesium.Cartesian3.fromDegrees(lon, lat);
 
 							state.lon = lon;
 							state.lat = lat;
 							state.alt = 2000;
+							state.groundHeight = 0;
+
+							const position = Cesium.Cartesian3.fromDegrees(lon, lat);
 
 							viewer.camera.flyTo({
 								destination: Cesium.Cartesian3.fromDegrees(lon, lat, 15000),
@@ -919,6 +931,9 @@ function setupLocationSearch() {
 							if (spawnMarker) {
 								viewer.entities.remove(spawnMarker);
 							}
+
+							const locationDisplayName = item.display_name.split(',')[0];
+
 							spawnMarker = viewer.entities.add({
 								position: position,
 								point: {
@@ -929,7 +944,7 @@ function setupLocationSearch() {
 									disableDepthTestDistance: Number.POSITIVE_INFINITY
 								},
 								label: {
-									text: item.display_name.split(',')[0],
+									text: locationDisplayName,
 									font: "14pt AceCombat",
 									style: Cesium.LabelStyle.FILL_AND_OUTLINE,
 									outlineWidth: 2,
@@ -944,8 +959,20 @@ function setupLocationSearch() {
 
 							searchInput.style.display = 'none';
 							instructionText.style.display = 'block';
-							instructionText.textContent = "LOCATION: " + item.display_name.split(',')[0].toUpperCase();
+							instructionText.textContent = "LOCATION: " + locationDisplayName.toUpperCase();
 							searchInput.value = item.display_name;
+
+							const positions = [Cesium.Cartographic.fromDegrees(lon, lat)];
+							Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions).then(updatedPositions => {
+								if (updatedPositions[0] && updatedPositions[0].height !== undefined) {
+									const h = updatedPositions[0].height;
+									state.groundHeight = h;
+									state.alt = h + 2000;
+									if (spawnMarker) {
+										spawnMarker.position = Cesium.Cartesian3.fromDegrees(lon, lat, h);
+									}
+								}
+							}).catch(e => { });
 						};
 						resultsContainer.appendChild(div);
 					});
@@ -974,14 +1001,26 @@ function setupLocationSearch() {
 	});
 }
 
-document.getElementById('confirmSpawnBtn').onclick = () => {
+document.getElementById('confirmSpawnBtn').onclick = async () => {
 	const vignette = document.getElementById('transition-vignette');
 	if (vignette) vignette.style.opacity = '1';
 
 	soundManager.play('spawn');
 
+	const viewer = getViewer();
+	let groundH = state.groundHeight || 0;
+	try {
+		const positions = [Cesium.Cartographic.fromDegrees(state.lon, state.lat)];
+		const updatedPositions = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions);
+		if (updatedPositions[0] && updatedPositions[0].height !== undefined) {
+			groundH = updatedPositions[0].height;
+			state.groundHeight = groundH;
+		}
+	} catch (e) {
+		if (groundH === 0) groundH = getAccurateHeight(state.lon, state.lat);
+	}
+
 	setTimeout(() => {
-		const viewer = getViewer();
 		if (spawnMarker) {
 			viewer.entities.remove(spawnMarker);
 			spawnMarker = null;
@@ -989,8 +1028,7 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 
 		setControlsEnabled(false);
 
-		const groundH = getAccurateHeight(state.lon, state.lat);
-		state.alt = groundH + 1500;
+		state.alt = groundH + 2000;
 		state.speed = 100;
 		state.pitch = 0;
 		state.roll = 0;
