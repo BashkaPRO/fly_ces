@@ -7,6 +7,7 @@ import { movePosition } from './utils/math';
 import { calculateDistance, reverseGeocode } from './world/regions';
 import { HUD } from './ui/hud';
 import { JetFlame } from './plane/jetFlame';
+import { WeaponSystem } from './plane/weaponSystem';
 import { soundManager } from './utils/soundManager';
 import { NPCSystem } from './systems/npcSystem';
 import * as Cesium from 'cesium';
@@ -125,7 +126,8 @@ let state = {
 	pitch: 0,
 	roll: 0,
 	speed: 0,
-	throttle: 0
+	throttle: 0,
+	weaponSystem: null
 };
 
 let currentRegionName = null;
@@ -147,6 +149,7 @@ let physics = new PlanePhysics();
 let controller = new PlaneController();
 let hud = new HUD();
 let npcSystem;
+let weaponSystem;
 
 let fps = 0;
 let frameCount = 0;
@@ -340,6 +343,8 @@ function initThree() {
 		planeModel.add(flameR.group);
 		jetFlames.push(flameL, flameR);
 
+		weaponSystem = new WeaponSystem(getViewer(), scene, planeModel);
+
 		planeModel.traverse(child => {
 			child.layers.set(1);
 		});
@@ -374,6 +379,20 @@ function update(dt) {
 	state.throttle = input.throttle;
 	state.yaw = input.yaw;
 	state.isBoosting = physicsResult.isBoosting;
+	state.weaponSystem = weaponSystem;
+
+	if (weaponSystem) {
+		if (input.weaponIndex !== -1) {
+			weaponSystem.selectWeapon(input.weaponIndex);
+		}
+		if (input.fire) {
+			weaponSystem.fire(state);
+		}
+		if (input.fireFlare) {
+			weaponSystem.fireFlare(state);
+		}
+		weaponSystem.update(dt, state);
+	}
 
 	const newPos = movePosition(state.lon, state.lat, state.alt, state.heading, state.pitch, state.speed * dt);
 	state.lon = newPos.lon;

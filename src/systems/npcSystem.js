@@ -28,9 +28,6 @@ export class NPCSystem {
 				}
 			});
 			this.loaded = true;
-			console.log("NPC Model Loaded in Three.js layer");
-		}, undefined, (error) => {
-			console.error("Error loading NPC model:", error);
 		});
 	}
 

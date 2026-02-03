@@ -41,7 +41,10 @@ export class PlaneController {
 			boost: false,
 			cameraYaw: 0,
 			cameraPitch: 0,
-			isDragging: false
+			isDragging: false,
+			fire: false,
+			fireFlare: false,
+			weaponIndex: -1
 		};
 
 		this.sensitivity = 0.2;
@@ -54,6 +57,14 @@ export class PlaneController {
 	update() {
 		this.input.boost = !!this.keys[' '];
 		this.input.isDragging = this.mouseDragging;
+		
+		this.input.fire = !!this.keys['enter'] || !!this.keys['f'];
+		this.input.fireFlare = !!this.keys['v'];
+		
+		this.input.weaponIndex = -1;
+		if (this.keys['1']) this.input.weaponIndex = 0;
+		if (this.keys['2']) this.input.weaponIndex = 1;
+		if (this.keys['3']) this.input.weaponIndex = 2;
 
 		const accelRate = 0.5;
 		if (this.keys['w'] || this.keys['shift']) {

@@ -990,3 +990,105 @@ input[type="range"]::-webkit-slider-thumb {
 	white-space: nowrap;
 	margin-top: 15px;
 }
+
+#weapons-hud {
+	position: absolute;
+	bottom: 30px;
+	right: 30px;
+	display: flex;
+	align-items: flex-end;
+	pointer-events: none;
+	gap: 10px;
+}
+
+#weapon-list {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.weapon-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	width: 220px;
+	padding: 5px 10px;
+	background: rgba(0, 40, 0, 0.4);
+	border: 1px solid rgba(0, 255, 0, 0.2);
+	font-size: 16px;
+	opacity: 0.6;
+	transition: all 0.2s ease;
+}
+
+.weapon-item.active {
+	background: rgba(0, 80, 0, 0.6);
+	border: 1px solid rgba(0, 255, 0, 0.8);
+	opacity: 1;
+	box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+	position: relative;
+}
+
+.weapon-item.active::after {
+	content: '';
+	position: absolute;
+	right: 0;
+	top: 0;
+	width: 5px;
+	height: 100%;
+	background: #0f0;
+	box-shadow: 0 0 8px #0f0;
+}
+
+.weapon-ammo {
+	font-weight: bold;
+}
+
+#aircraft-icon {
+	width: 70px;
+	height: 120px;
+	border: 1px solid rgba(0, 255, 0, 0.8);
+	background: rgba(0, 40, 0, 0.4);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 10px;
+	box-sizing: border-box;
+}
+
+#aircraft-icon img {
+	width: 70px;
+	height: 70px;
+	filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%);
+	margin-bottom: 10px;
+}
+
+#aircraft-label {
+	font-size: 14px;
+}
+
+.weapon-item.overheated {
+	background: rgba(80, 0, 0, 0.6) !important;
+	border: 1px solid #f00 !important;
+	color: #f00 !important;
+	animation: blink 0.5s infinite;
+}
+
+.weapon-item.overheated::after {
+	background: #f00 !important;
+	box-shadow: 0 0 8px #f00 !important;
+}
+
+@keyframes blink {
+	0% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.5;
+	}
+
+	100% {
+		opacity: 1;
+	}
+}

@@ -23,6 +23,17 @@ export class HUD {
 
 		this.pullUpElem = document.getElementById('pull-up-warning');
 
+		this.weaponElems = {
+			gun: document.getElementById('weapon-gun'),
+			missile: document.getElementById('weapon-missile'),
+			flare: document.getElementById('weapon-flare')
+		};
+		this.weaponAmmoElems = {
+			gun: this.weaponElems.gun.querySelector('.weapon-ammo'),
+			missile: this.weaponElems.missile.querySelector('.weapon-ammo'),
+			flare: this.weaponElems.flare.querySelector('.weapon-ammo')
+		};
+
 		this.vignette = document.getElementById('transition-vignette');
 
 		this.startTime = Date.now();
@@ -282,6 +293,10 @@ export class HUD {
 		}
 
 		this.speedElem.innerText = Math.round(state.speed).toString().padStart(3, '0');
+
+		if (state.weaponSystem) {
+			this.updateWeapons(state.weaponSystem);
+		}
 
 		let compassHeading = this.smoothedHeading;
 		while (compassHeading < 0) compassHeading += 360;
@@ -625,5 +640,40 @@ export class HUD {
 		if (this.fpsElem) {
 			this.fpsElem.innerText = Math.round(fps).toString();
 		}
+	}
+
+	updateWeapons(weaponSystem) {
+		const currentWeapon = weaponSystem.getCurrentWeapon();
+
+		weaponSystem.weapons.forEach(weapon => {
+			const elem = this.weaponElems[weapon.id];
+			const ammoElem = this.weaponAmmoElems[weapon.id];
+
+			if (elem) {
+				if (weapon === currentWeapon) {
+					elem.classList.add('active');
+					
+					// Gun overheat visual
+					if (weapon.id === 'gun' && weaponSystem.isGunOverheated) {
+						elem.classList.add('overheated');
+					} else {
+						elem.classList.remove('overheated');
+					}
+				} else {
+					elem.classList.remove('active');
+					elem.classList.remove('overheated');
+				}
+			}
+
+			if (ammoElem) {
+				if (weapon.id === 'gun' && weaponSystem.isGunOverheated) {
+					ammoElem.innerText = 'OVERHEAT';
+				} else if (weapon.ammo === Infinity) {
+					ammoElem.innerText = 'INFINITY';
+				} else {
+					ammoElem.innerText = weapon.ammo.toString().padStart(2, '0');
+				}
+			}
+		});
 	}
 }
