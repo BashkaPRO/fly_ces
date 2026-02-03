@@ -133,6 +133,11 @@ let lastGeocodePos = { lon: 0, lat: 0 };
 const GEOCODE_INTERVAL = 10000;
 const GEOCODE_MIN_DIST = 1000;
 
+let lastGPWSWarningTime = 0;
+const GPWS_COOLDOWN = 1800;
+let gpwsActive = false;
+let pauseStartTime = 0;
+
 let scene, camera, renderer;
 let planeModel;
 let jetFlames = [];
@@ -223,20 +228,19 @@ async function initSounds() {
 	soundManager.init(camera);
 
 	await Promise.all([
-		soundManager.loadSound('boost', '/assets/sounds/boost.wav', false, 0.4),
-		soundManager.loadSound('boost-2', '/assets/sounds/boost-2.wav', false, 0.5),
+		soundManager.loadSound('boost', '/assets/sounds/boost.wav', false, 0.35),
 		soundManager.loadSound('throttle', '/assets/sounds/throttle.wav', false, 0.4),
 		soundManager.loadSound('explode', '/assets/sounds/explode.wav', false, 0.5),
 		soundManager.loadSound('jet-engine', '/assets/sounds/jet-engine.wav', true, 0.3),
 		soundManager.loadSound('spawn', '/assets/sounds/spawn.wav', false, 0.5),
-		soundManager.loadSound('roll', '/assets/sounds/roll.wav', true, 0.5),
-		soundManager.loadSound('pitch', '/assets/sounds/pitch.wav', true, 0.5),
+		soundManager.loadSound('roll', '/assets/sounds/roll.wav', true, 0.75),
+		soundManager.loadSound('pitch', '/assets/sounds/pitch.wav', true, 0.75),
 		soundManager.loadSound('button-click', '/assets/sounds/button-click.mp3', false, 1.0),
 		soundManager.loadSound('button-hover', '/assets/sounds/button-hover.mp3', false, 0.25),
 		soundManager.loadSound('zoom-in', '/assets/sounds/zoom-in.mp3', false, 0.5),
 		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 1.0),
-		soundManager.loadSound('warning', '/assets/sounds/warning.wav', true, 0.5),
-		soundManager.loadSound('pull-up', '/assets/sounds/terrain-pull-up.wav', true, 0.5)
+		soundManager.loadSound('terrain-pull-up', '/assets/sounds/terrain-pull-up.wav', false, 0.8),
+		soundManager.loadSound('warning', '/assets/sounds/warning.wav', false, 0.6)
 	]);
 
 	loadingStatus.audio = true;
@@ -245,15 +249,20 @@ async function initSounds() {
 }
 
 function stopAllFlyingSounds(fadeOut = 0.5) {
-	soundManager.stop('jet-engine', fadeOut);
-	soundManager.stop('boost', fadeOut);
-	soundManager.stop('boost-2', fadeOut);
-	soundManager.stop('roll', fadeOut);
-	soundManager.stop('pitch', fadeOut);
-	soundManager.stop('throttle', fadeOut);
-	soundManager.stop('background', fadeOut);
-	soundManager.stop('warning', fadeOut);
-	soundManager.stop('pull-up', fadeOut);
+	soundManager.stopAll(fadeOut);
+}
+
+function pauseGameplaySounds() {
+	pauseStartTime = Date.now();
+	soundManager.pauseAll();
+}
+
+function resumeGameplaySounds() {
+	const pauseDuration = Date.now() - pauseStartTime;
+	if (lastGPWSWarningTime > 0) {
+		lastGPWSWarningTime += pauseDuration;
+	}
+	soundManager.resumeAll();
 }
 
 function setupButtonSounds() {
@@ -375,12 +384,13 @@ function update(dt) {
 	}
 
 	checkCrash();
+	checkGPWS();
 
 	if (soundManager.isPlaying('jet-engine')) {
 		const minSpeed = 100;
 		const maxSpeed = 1000;
-		const minVol = 0.10;
-		const maxVol = 0.25;
+		const minVol = 0.20;
+		const maxVol = 0.35;
 		const speedFactor = Math.max(0, Math.min(1.0, (state.speed - minSpeed) / (maxSpeed - minSpeed)));
 		const engineVol = minVol + speedFactor * (maxVol - minVol);
 		soundManager.setVolume('jet-engine', engineVol);
@@ -388,7 +398,6 @@ function update(dt) {
 
 	if (state.isBoosting && !lastIsBoosting) {
 		soundManager.play('boost');
-		soundManager.play('boost-2');
 	}
 
 	if (state.throttle > lastThrottleLevel + 0.01) {
@@ -539,59 +548,90 @@ function update(dt) {
 	}
 }
 
-let flightStartTime = 0;
-
-function getAccurateHeight(lon, lat) {
-	const viewer = getViewer();
-	if (!viewer) return 0;
-	const carto = Cesium.Cartographic.fromDegrees(lon, lat);
-	const carte = Cesium.Cartesian3.fromDegrees(lon, lat);
-
-	let h = viewer.scene.globe.getHeight(carto) || 0;
-
-	if (viewer.scene.sampleHeightSupported) {
-		try {
-			const sh = viewer.scene.sampleHeight(carte);
-			if (sh !== undefined && sh > -1000) h = sh;
-		} catch (e) { }
+function checkGPWS() {
+	if (currentState !== States.FLYING) {
+		hud.setPullUpWarning(false);
+		return;
 	}
-	return h;
+
+	const viewer = getViewer();
+	if (!viewer) return;
+
+	const cartographic = Cesium.Cartographic.fromDegrees(state.lon, state.lat);
+	const terrainHeight = viewer.scene.globe.getHeight(cartographic);
+
+	if (terrainHeight === undefined) return;
+
+	const agl = state.alt - terrainHeight;
+	const pitchRad = Cesium.Math.toRadians(state.pitch);
+	const verticalSpeed = state.speed * Math.sin(pitchRad);
+
+	let showWarning = false;
+
+	if (state.pitch < -1) {
+		if (agl < 450) {
+			if (agl < 150) {
+				showWarning = true;
+			}
+
+			if (verticalSpeed < -20) {
+				showWarning = true;
+			}
+		}
+	}
+
+	hud.setPullUpWarning(showWarning);
+
+	if (showWarning) {
+		const now = Date.now();
+		// Cek apakah suara sedang berputar (termasuk yang di-resume) ATAU baru saja dipicu
+		if (!gpwsActive || (now - lastGPWSWarningTime > GPWS_COOLDOWN && !soundManager.isPlaying('terrain-pull-up'))) {
+			soundManager.play('terrain-pull-up');
+			lastGPWSWarningTime = now;
+		}
+		gpwsActive = true;
+	} else {
+		if (gpwsActive) {
+			soundManager.stop('terrain-pull-up', 0.1);
+			gpwsActive = false;
+		}
+	}
 }
 
+let lastCrashCheck = 0;
+let flightStartTime = 0;
+
 function checkCrash() {
-	if (currentState !== States.FLYING || (Date.now() - flightStartTime < 3000)) return;
+	if (currentState !== States.FLYING) return;
 
-	const terrainHeight = getAccurateHeight(state.lon, state.lat);
-	const heightAboveGround = state.alt - terrainHeight;
+	const now = Date.now();
+	if (now - lastCrashCheck < 100) return;
+	lastCrashCheck = now;
 
-	const isDescending = state.pitch < -5;
-	const isDangerouslyLow = heightAboveGround < 150 && state.pitch < 2;
-	const shouldPullUp = (heightAboveGround < 500 && isDescending) || isDangerouslyLow;
+	if (now - flightStartTime < 3000) return;
 
-	hud.setPullUpWarning(shouldPullUp);
+	const viewer = getViewer();
+	if (!viewer) return;
 
-	if (shouldPullUp) {
-		soundManager.play('pull-up');
-	} else {
-		soundManager.stop('pull-up');
-	}
+	const cartographic = Cesium.Cartographic.fromDegrees(state.lon, state.lat);
+	const terrainHeight = viewer.scene.globe.getHeight(cartographic);
 
-	if (state.alt <= terrainHeight + 5) {
+	if (terrainHeight !== undefined && state.alt <= terrainHeight + 5) {
 		currentState = States.CRASHED;
 		uiContainer.classList.add('hidden');
 		threeContainer.classList.add('hidden');
 		crashMenu.classList.remove('hidden');
-		hud.setPullUpWarning(false);
-		soundManager.play('explode');
+
 		stopAllFlyingSounds(0.1);
+		// Play explode AFTER stopping other sounds so it doesn't get cut off
+		setTimeout(() => soundManager.play('explode'), 50);
 	}
 }
 
 function animate() {
 	requestAnimationFrame(animate);
 
-	let dt = clock ? clock.getDelta() : 0.016;
-	if (dt > 0.1) dt = 0.1;
+	const dt = clock ? clock.getDelta() : 0.016;
 	const now = performance.now();
 
 	frameCount++;
@@ -697,7 +737,7 @@ document.getElementById('resumeBtn').onclick = () => {
 	pauseMenu.classList.add('hidden');
 	uiContainer.classList.remove('hidden');
 	currentState = States.FLYING;
-	soundManager.play('jet-engine', 0.5);
+	resumeGameplaySounds();
 };
 
 document.getElementById('restartBtn').onclick = () => {
@@ -741,7 +781,6 @@ function enterSpawnPicking(useVignette = true) {
 		}
 		if (instructionText) {
 			instructionText.style.display = 'block';
-			instructionText.textContent = 'CLICK ANYWHERE ON THE MAP TO CHOOSE SPAWN POINT';
 		}
 		if (resultsContainer) {
 			resultsContainer.style.display = 'none';
@@ -772,10 +811,8 @@ function exitSpawnPicking() {
 	stopAllFlyingSounds(0.3);
 	spawnInstruction.classList.add('hidden');
 	confirmSpawnBtn.classList.add('hidden');
-	loadingIndicator.classList.add('hidden');
 	mainMenu.classList.remove('hidden');
 	currentState = States.MENU;
-	updateLoadingUI();
 	setRenderOptimization(true);
 
 	setControlsEnabled(false);
@@ -810,8 +847,11 @@ function setupSpawnPicker() {
 
 			state.lon = lon;
 			state.lat = lat;
-			state.alt = 2000;
-			state.groundHeight = cartographic.height;
+			state.alt = Math.max(0, cartographic.height) + 1500;
+
+			Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
+				.then(([p]) => state.alt = Math.max(0, p.height || 0) + 1500)
+				.catch(() => { });
 
 			if (spawnMarker) {
 				viewer.entities.remove(spawnMarker);
@@ -826,7 +866,7 @@ function setupSpawnPicker() {
 					disableDepthTestDistance: Number.POSITIVE_INFINITY
 				},
 				label: {
-					text: "TARGET SPAWN LOCATION",
+					text: "Target Spawn Location",
 					font: "14pt AceCombat",
 					style: Cesium.LabelStyle.FILL_AND_OUTLINE,
 					outlineWidth: 2,
@@ -837,25 +877,6 @@ function setupSpawnPicker() {
 			});
 
 			confirmSpawnBtn.classList.remove('hidden');
-
-			const instructionText = document.getElementById('instruction-text');
-			if (instructionText) {
-				instructionText.textContent = "IDENTIFYING LOCATION...";
-
-				const captureLon = lon;
-				const captureLat = lat;
-
-				reverseGeocode(captureLon, captureLat).then(locationName => {
-					if (currentState === States.PICK_SPAWN && state.lon === captureLon && state.lat === captureLat) {
-						if (locationName) {
-							instructionText.textContent = "LOCATION: " + locationName;
-							if (spawnMarker) spawnMarker.label.text = locationName;
-						} else {
-							instructionText.textContent = "SPAWN POINT SELECTED";
-						}
-					}
-				});
-			}
 		}
 	}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 }
@@ -915,13 +936,18 @@ function setupLocationSearch() {
 							const lat = parseFloat(item.lat);
 
 							const viewer = getViewer();
+							const position = Cesium.Cartesian3.fromDegrees(lon, lat);
 
 							state.lon = lon;
 							state.lat = lat;
-							state.alt = 2000;
-							state.groundHeight = 0;
+							state.alt = 1500;
 
-							const position = Cesium.Cartesian3.fromDegrees(lon, lat);
+							const cartographic = Cesium.Cartographic.fromDegrees(lon, lat);
+							Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
+								.then(([p]) => {
+									state.alt = Math.max(0, p.height || 0) + 1500;
+								})
+								.catch(() => { });
 
 							viewer.camera.flyTo({
 								destination: Cesium.Cartesian3.fromDegrees(lon, lat, 15000),
@@ -931,9 +957,6 @@ function setupLocationSearch() {
 							if (spawnMarker) {
 								viewer.entities.remove(spawnMarker);
 							}
-
-							const locationDisplayName = item.display_name.split(',')[0];
-
 							spawnMarker = viewer.entities.add({
 								position: position,
 								point: {
@@ -944,7 +967,7 @@ function setupLocationSearch() {
 									disableDepthTestDistance: Number.POSITIVE_INFINITY
 								},
 								label: {
-									text: locationDisplayName,
+									text: item.display_name.split(',')[0],
 									font: "14pt AceCombat",
 									style: Cesium.LabelStyle.FILL_AND_OUTLINE,
 									outlineWidth: 2,
@@ -959,20 +982,7 @@ function setupLocationSearch() {
 
 							searchInput.style.display = 'none';
 							instructionText.style.display = 'block';
-							instructionText.textContent = "LOCATION: " + locationDisplayName.toUpperCase();
 							searchInput.value = item.display_name;
-
-							const positions = [Cesium.Cartographic.fromDegrees(lon, lat)];
-							Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions).then(updatedPositions => {
-								if (updatedPositions[0] && updatedPositions[0].height !== undefined) {
-									const h = updatedPositions[0].height;
-									state.groundHeight = h;
-									state.alt = h + 2000;
-									if (spawnMarker) {
-										spawnMarker.position = Cesium.Cartesian3.fromDegrees(lon, lat, h);
-									}
-								}
-							}).catch(e => { });
 						};
 						resultsContainer.appendChild(div);
 					});
@@ -1001,26 +1011,14 @@ function setupLocationSearch() {
 	});
 }
 
-document.getElementById('confirmSpawnBtn').onclick = async () => {
+document.getElementById('confirmSpawnBtn').onclick = () => {
 	const vignette = document.getElementById('transition-vignette');
 	if (vignette) vignette.style.opacity = '1';
 
 	soundManager.play('spawn');
 
-	const viewer = getViewer();
-	let groundH = state.groundHeight || 0;
-	try {
-		const positions = [Cesium.Cartographic.fromDegrees(state.lon, state.lat)];
-		const updatedPositions = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions);
-		if (updatedPositions[0] && updatedPositions[0].height !== undefined) {
-			groundH = updatedPositions[0].height;
-			state.groundHeight = groundH;
-		}
-	} catch (e) {
-		if (groundH === 0) groundH = getAccurateHeight(state.lon, state.lat);
-	}
-
 	setTimeout(() => {
+		const viewer = getViewer();
 		if (spawnMarker) {
 			viewer.entities.remove(spawnMarker);
 			spawnMarker = null;
@@ -1028,7 +1026,6 @@ document.getElementById('confirmSpawnBtn').onclick = async () => {
 
 		setControlsEnabled(false);
 
-		state.alt = groundH + 2000;
 		state.speed = 100;
 		state.pitch = 0;
 		state.roll = 0;
@@ -1076,7 +1073,7 @@ document.getElementById('confirmSpawnBtn').onclick = async () => {
 				if (vignette) vignette.style.opacity = '0';
 			}
 		});
-	}, 1000);
+	}, 500);
 };
 
 window.addEventListener('keydown', (e) => {
@@ -1094,14 +1091,12 @@ window.addEventListener('keydown', (e) => {
 			currentState = States.PAUSED;
 			uiContainer.classList.add('hidden');
 			pauseMenu.classList.remove('hidden');
-			hud.setPullUpWarning(false);
-			stopAllFlyingSounds(0.3);
+			pauseGameplaySounds();
 		} else if (currentState === States.PAUSED) {
 			currentState = States.FLYING;
 			pauseMenu.classList.add('hidden');
 			uiContainer.classList.remove('hidden');
-			soundManager.play('jet-engine', 0.5);
-			soundManager.play('background', 1.0);
+			resumeGameplaySounds();
 		} else if (currentState === States.PICK_SPAWN && key === 'escape') {
 			exitSpawnPicking();
 		}
@@ -1113,7 +1108,7 @@ document.addEventListener('visibilitychange', () => {
 		currentState = States.PAUSED;
 		uiContainer.classList.add('hidden');
 		pauseMenu.classList.remove('hidden');
-		stopAllFlyingSounds(0.3);
+		pauseGameplaySounds();
 	}
 });
 
@@ -1122,7 +1117,7 @@ window.addEventListener('blur', () => {
 		currentState = States.PAUSED;
 		uiContainer.classList.add('hidden');
 		pauseMenu.classList.remove('hidden');
-		stopAllFlyingSounds(0.3);
+		pauseGameplaySounds();
 	}
 });
 
@@ -1157,12 +1152,10 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener((queueLength) => {
 			if (queueLength > 0) {
 				loadingText.textContent = "Loading Terrain...";
 				loadingIndicator.classList.remove('hidden');
-			} else if (loadingText.textContent === "Loading Terrain...") {
+			} else {
 				loadingIndicator.classList.add('hidden');
 			}
 		} else if (currentState === States.FLYING || currentState === States.TRANSITIONING) {
-			loadingIndicator.classList.add('hidden');
-		} else if (currentState === States.MENU && loadingText.textContent === "Loading Terrain...") {
 			loadingIndicator.classList.add('hidden');
 		}
 	}
