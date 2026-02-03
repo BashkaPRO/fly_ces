@@ -1,18 +1,26 @@
 import * as Cesium from 'cesium';
 
 export function movePosition(lon, lat, alt, heading, pitch, distance) {
+	const planePos = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+	const modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(planePos);
+
 	const headingRad = Cesium.Math.toRadians(heading);
 	const pitchRad = Cesium.Math.toRadians(pitch);
 
-	const R = 6371000;
+	// Calculate direction vector in ENU coordinates
+	// X = East, Y = North, Z = Up
+	const dirX = Math.sin(headingRad) * Math.cos(pitchRad);
+	const dirY = Math.cos(headingRad) * Math.cos(pitchRad);
+	const dirZ = Math.sin(pitchRad);
 
-	const dLat = (distance * Math.cos(headingRad) * Math.cos(pitchRad)) / R;
-	const dLon = (distance * Math.sin(headingRad) * Math.cos(pitchRad)) / (R * Math.cos(Cesium.Math.toRadians(lat)));
-	const dAlt = distance * Math.sin(pitchRad);
+	const movement = new Cesium.Cartesian3(dirX * distance, dirY * distance, dirZ * distance);
+	const newPosCartesian = Cesium.Matrix4.multiplyByPoint(modelMatrix, movement, new Cesium.Cartesian3());
 
+	const newCartographic = Cesium.Cartographic.fromCartesian(newPosCartesian);
+	
 	return {
-		lon: lon + Cesium.Math.toDegrees(dLon),
-		lat: lat + Cesium.Math.toDegrees(dLat),
-		alt: alt + dAlt
+		lon: Cesium.Math.toDegrees(newCartographic.longitude),
+		lat: Cesium.Math.toDegrees(newCartographic.latitude),
+		alt: newCartographic.height
 	};
 }
