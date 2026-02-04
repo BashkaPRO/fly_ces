@@ -1108,7 +1108,18 @@ document.getElementById('confirmSpawnBtn').onclick = () => {
 		state.speed = 100;
 		state.pitch = 0;
 		state.roll = 0;
-		state.heading = 0;
+
+		try {
+			const cam = viewer && viewer.camera;
+			if (cam && typeof cam.heading === 'number') {
+				state.heading = Cesium.Math.toDegrees(cam.heading);
+			} else {
+				state.heading = 0;
+			}
+		} catch (e) {
+			state.heading = 0;
+		}
+		
 		currentRegionName = null;
 		lastGeocodeTime = 0;
 		lastGeocodePos = { lon: 0, lat: 0 };
