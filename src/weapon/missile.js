@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import * as Cesium from 'cesium';
 import { movePosition } from '../utils/math';
+import { particles } from '../utils/particles';
+import { soundManager } from '../utils/soundManager';
 
 export class Missile {
 	constructor(scene, viewer, startPos, heading, pitch, speed, target = null) {
@@ -32,16 +34,41 @@ export class Missile {
 	}
 
 	initMesh() {
-		const geometry = new THREE.CylinderGeometry(0.12, 0.12, 2.5, 8);
-		geometry.translate(0, -1.25, 0);
-		const material = new THREE.MeshPhongMaterial({ color: 0xdddddd });
-		this.mesh = new THREE.Mesh(geometry, material);
 
-		const flameGeom = new THREE.ConeGeometry(0.2, 0.8, 8);
-		flameGeom.translate(0, -2.7, 0);
-		const flameMat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
+		this.mesh = new THREE.Group();
+
+		const bodyGeom = new THREE.CylinderGeometry(0.12, 0.12, 2.2, 12);
+		bodyGeom.translate(0, -1.1, 0);
+		const bodyMat = new THREE.MeshStandardMaterial({ color: 0xbfbfbf, metalness: 0.6, roughness: 0.4 });
+		const body = new THREE.Mesh(bodyGeom, bodyMat);
+		this.mesh.add(body);
+
+		const noseGeom = new THREE.ConeGeometry(0.12, 0.6, 12);
+		noseGeom.translate(0, 0.45, 0);
+		const noseMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.7, roughness: 0.25 });
+		const nose = new THREE.Mesh(noseGeom, noseMat);
+		nose.position.set(0, 0.9, 0);
+		this.mesh.add(nose);
+
+		for (let i = 0; i < 4; i++) {
+			const finGeom = new THREE.BoxGeometry(0.02, 0.3, 0.6);
+			const finMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.2, roughness: 0.7 });
+			const fin = new THREE.Mesh(finGeom, finMat);
+			fin.position.set(0, -0.8, 0.45);
+			fin.rotateX(Math.PI / 2);
+			fin.rotateY(i * Math.PI / 2);
+			this.mesh.add(fin);
+		}
+
+		const flameColor = new THREE.Color(1.0, 0.65, 0.12);
+		const flameGeom = new THREE.SphereGeometry(0.26, 10, 10);
+		const flameMat = new THREE.MeshBasicMaterial({ color: flameColor, transparent: true, opacity: 0.95 });
 		const flame = new THREE.Mesh(flameGeom, flameMat);
+		flame.position.set(0, -1.6, 0);
 		this.mesh.add(flame);
+
+		this.mesh.layers.enable(0);
+		this.mesh.layers.enable(1);
 
 		this.mesh.matrixAutoUpdate = false;
 		this.scene.add(this.mesh);
@@ -114,11 +141,12 @@ export class Missile {
 		if (this.active && now - this.lastTrailSpawn > 5) {
 			this.lastTrailSpawn = now;
 
-			const smokeGeom = new THREE.SphereGeometry(0.5, 16, 16);
+			const smokeGeom = new THREE.SphereGeometry(1.2, 16, 16);
+			const gray = 0.5 + Math.random() * 0.75;
 			const smokeMat = new THREE.MeshBasicMaterial({
-				color: 0xcccccc,
+				color: new THREE.Color(gray, gray, gray),
 				transparent: true,
-				opacity: 0.5
+				opacity: 0.6 + Math.random() * 0.25
 			});
 			const smoke = new THREE.Mesh(smokeGeom, smokeMat);
 			smoke.lon = this.lon;
@@ -220,6 +248,11 @@ export class Missile {
 
 	hitNPC(npc) {
 		npc.destroyed = true;
+		try {
+			particles.spawnExplosion(this.lon, this.lat, this.alt, { count: 80, smokeCount: 18, big: true });
+			particles.spawnWreckage(this.lon, this.lat, this.alt, this.heading, this.pitch, { count: 48 });
+			soundManager.play('explode');
+		} catch (e) { }
 		this.destroy();
 	}
 
@@ -227,6 +260,11 @@ export class Missile {
 		const cartographic = Cesium.Cartographic.fromDegrees(this.lon, this.lat);
 		const terrainHeight = this.viewer.scene.globe.getHeight(cartographic);
 		if (terrainHeight !== undefined && this.alt < terrainHeight) {
+			try {
+				particles.spawnExplosion(this.lon, this.lat, this.alt, { count: 80, smokeCount: 18, big: true });
+				particles.spawnWreckage(this.lon, this.lat, this.alt, this.heading, this.pitch, { count: 48 });
+				soundManager.play('explode');
+			} catch (e) { }
 			this.destroy();
 		}
 	}

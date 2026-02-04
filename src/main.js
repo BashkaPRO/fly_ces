@@ -11,6 +11,7 @@ import { WeaponSystem } from './systems/weaponSystem';
 import { soundManager } from './utils/soundManager';
 import { NPCSystem } from './systems/npcSystem';
 import * as Cesium from 'cesium';
+import { particles } from './utils/particles';
 
 const States = {
 	MENU: 'MENU',
@@ -309,6 +310,8 @@ function initThree() {
 
 	ambientLight.layers.enable(1);
 	directionalLight.layers.enable(1);
+
+	try { particles.init(scene, getViewer()); } catch (e) { }
 
 	initSounds().catch(err => console.error('Failed to init sounds', err));
 
@@ -707,6 +710,8 @@ function animate() {
 		}
 
 		if (mixer) mixer.update(dt);
+
+		try { if (currentState === States.FLYING) particles.update(dt); } catch (e) { }
 
 		renderer.render(scene, camera);
 
