@@ -154,9 +154,22 @@ export class WeaponSystem {
 		this.flares.push(flare);
 	}
 
-	update(dt, playerState) {
+	update(dt, playerState, input = null) {
 		const prevLockStatus = this.lockStatus;
 		const currentWeapon = this.getCurrentWeapon();
+
+		try {
+			const isFiringGun = input && input.fire && currentWeapon.id === 'gun' && !this.isGunOverheated && currentWeapon.ammo > 0;
+			if (isFiringGun) {
+				if (!soundManager.isPlaying('m61-firing')) {
+					soundManager.play('m61-firing', 0.1);
+				}
+			} else {
+				if (soundManager.isPlaying('m61-firing')) {
+					soundManager.stop('m61-firing', 0.1);
+				}
+			}
+		} catch (e) { }
 
 		if (currentWeapon.id === 'missile') {
 			const potentialTarget = this.findPotentialTarget(playerState);

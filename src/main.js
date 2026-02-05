@@ -244,7 +244,8 @@ async function initSounds() {
 		soundManager.loadSound('button-click', '/assets/sounds/button-click.mp3', false, 1.0),
 		soundManager.loadSound('button-hover', '/assets/sounds/button-hover.mp3', false, 0.25),
 		soundManager.loadSound('zoom-in', '/assets/sounds/zoom-in.mp3', false, 0.5),
-		soundManager.loadSound('missile-fire', '/assets/sounds/missile-firing-1.mp3', false, 0.6),
+		soundManager.loadSound('missile-fire', '/assets/sounds/missile-firing-1.mp3', false, 0.75),
+		soundManager.loadSound('m61-firing', '/assets/sounds/m61-firing.mp3', true, 0.75),
 		soundManager.loadSound('rwr-tws', '/assets/sounds/rwr-tws.mp3', true, 0.25),
 		soundManager.loadSound('rwr-lock', '/assets/sounds/rwr-lock.mp3', false, 0.25),
 		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 1.0),
@@ -401,7 +402,7 @@ function update(dt) {
 		if (input.fireFlare) {
 			weaponSystem.fireFlare(state);
 		}
-		weaponSystem.update(dt, state);
+		weaponSystem.update(dt, state, input);
 	}
 
 	const newPos = movePosition(state.lon, state.lat, state.alt, state.heading, state.pitch, state.speed * dt);
