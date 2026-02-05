@@ -237,7 +237,7 @@ async function initSounds() {
 		soundManager.loadSound('boost', '/assets/sounds/boost.wav', false, 0.35),
 		soundManager.loadSound('throttle', '/assets/sounds/throttle.wav', false, 0.4),
 		soundManager.loadSound('explode', '/assets/sounds/explode.wav', false, 0.5),
-		soundManager.loadSound('jet-engine', '/assets/sounds/jet-engine.wav', true, 0.3),
+		soundManager.loadSound('jet-engine', '/assets/sounds/jet-engine.mp3', true, 0.5),
 		soundManager.loadSound('spawn', '/assets/sounds/spawn.wav', false, 0.5),
 		soundManager.loadSound('roll', '/assets/sounds/roll.wav', true, 0.75),
 		soundManager.loadSound('pitch', '/assets/sounds/pitch.mp3', true, 0.75),
@@ -245,10 +245,10 @@ async function initSounds() {
 		soundManager.loadSound('button-hover', '/assets/sounds/button-hover.mp3', false, 0.25),
 		soundManager.loadSound('zoom-in', '/assets/sounds/zoom-in.mp3', false, 0.5),
 		soundManager.loadSound('missile-fire', '/assets/sounds/missile-firing-1.mp3', false, 0.75),
-		soundManager.loadSound('m61-firing', '/assets/sounds/m61-firing.mp3', true, 0.75),
-		soundManager.loadSound('rwr-tws', '/assets/sounds/rwr-tws.mp3', true, 0.25),
-		soundManager.loadSound('rwr-lock', '/assets/sounds/rwr-lock.mp3', false, 0.25),
-		soundManager.loadSound('background', '/assets/sounds/background.mp3', true, 1.0),
+		soundManager.loadSound('m61-firing', '/assets/sounds/m61-firing.mp3', true, 0.6),
+		soundManager.loadSound('rwr-tws', '/assets/sounds/rwr-tws.mp3', true, 0.2),
+		soundManager.loadSound('rwr-lock', '/assets/sounds/rwr-lock.mp3', false, 0.2),
+		soundManager.loadSound('wind', '/assets/sounds/wind.mp3', true, 0.35),
 		soundManager.loadSound('terrain-pull-up', '/assets/sounds/terrain-pull-up.mp3', false, 0.9),
 		soundManager.loadSound('warning', '/assets/sounds/warning.wav', false, 0.6)
 	]);
@@ -431,8 +431,8 @@ function update(dt) {
 	if (soundManager.isPlaying('jet-engine')) {
 		const minSpeed = 100;
 		const maxSpeed = 1000;
-		const minVol = 0.20;
-		const maxVol = 0.35;
+		const minVol = 0.5;
+		const maxVol = 0.6;
 		const speedFactor = Math.max(0, Math.min(1.0, (state.speed - minSpeed) / (maxSpeed - minSpeed)));
 		const engineVol = minVol + speedFactor * (maxVol - minVol);
 		soundManager.setVolume('jet-engine', engineVol);
@@ -833,7 +833,7 @@ function enterSpawnPicking(useVignette = true) {
 	if (npcSystem) npcSystem.clear();
 	stopAllFlyingSounds(0.3);
 	soundManager.play('zoom-in');
-	soundManager.play('background', 1.0);
+	soundManager.play('wind', 1.0);
 	const vignette = document.getElementById('transition-vignette');
 	if (useVignette && vignette) vignette.style.opacity = '1';
 
@@ -884,7 +884,7 @@ function enterSpawnPicking(useVignette = true) {
 
 function exitSpawnPicking() {
 	soundManager.play('zoom-in');
-	soundManager.stop('background', 0.5);
+	soundManager.stop('wind', 1.0);
 	stopAllFlyingSounds(0.3);
 	spawnInstruction.classList.add('hidden');
 	confirmSpawnBtn.classList.add('hidden');

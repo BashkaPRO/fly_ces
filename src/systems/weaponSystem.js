@@ -162,11 +162,11 @@ export class WeaponSystem {
 			const isFiringGun = input && input.fire && currentWeapon.id === 'gun' && !this.isGunOverheated && currentWeapon.ammo > 0;
 			if (isFiringGun) {
 				if (!soundManager.isPlaying('m61-firing')) {
-					soundManager.play('m61-firing', 0.1);
+					soundManager.play('m61-firing');
 				}
 			} else {
 				if (soundManager.isPlaying('m61-firing')) {
-					soundManager.stop('m61-firing', 0.1);
+					soundManager.stop('m61-firing');
 				}
 			}
 		} catch (e) { }
