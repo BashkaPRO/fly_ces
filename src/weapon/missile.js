@@ -224,7 +224,7 @@ export class Missile {
 		if (this.active && now - this.lastTrailSpawn > 5) {
 			this.lastTrailSpawn = now;
 
-			const smokeGeom = new THREE.SphereGeometry(0.5, 16, 16);
+			const smokeGeom = new THREE.SphereGeometry(1.0, 16, 16);
 			const gray = 0.5 + Math.random() * 0.75;
 			const smokeMat = new THREE.MeshBasicMaterial({
 				color: new THREE.Color(gray, gray, gray),
@@ -254,9 +254,7 @@ export class Missile {
 			}
 
 			if (!t.randomScale) t.randomScale = 0.8 + Math.random() * 0.5;
-
-			const ageFactor = 1.0 - (t.life / t.maxLife);
-			const scale = t.randomScale * (0.2 + ageFactor * 25.0);
+			const scale = t.randomScale * (1.0 + (1.0 - t.life / t.maxLife) * 15.0);
 			t.scale.set(scale, scale, scale);
 
 			const opacity = (t.life / t.maxLife) * 0.5;
