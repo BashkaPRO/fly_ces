@@ -398,12 +398,6 @@ function update(dt) {
 		if (input.fire) {
 			weaponSystem.fire(state);
 		}
-		if (input.fireGun) {
-			weaponSystem.fire(state, 'gun');
-		}
-		if (input.fireMissile) {
-			weaponSystem.fire(state, 'missile');
-		}
 		if (input.fireFlare) {
 			weaponSystem.fireFlare(state);
 		}

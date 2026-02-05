@@ -156,21 +156,30 @@ export class WeaponSystem {
 
 	update(dt, playerState) {
 		const prevLockStatus = this.lockStatus;
-		const potentialTarget = this.findPotentialTarget(playerState);
+		const currentWeapon = this.getCurrentWeapon();
 
-		if (potentialTarget) {
-			if (this.lockingTarget === potentialTarget) {
-				this.lockTime += dt;
-				if (this.lockTime >= this.lockRequiredTime) {
-					this.lockStatus = 'LOCKED';
-					this.target = potentialTarget;
+		if (currentWeapon.id === 'missile') {
+			const potentialTarget = this.findPotentialTarget(playerState);
+
+			if (potentialTarget) {
+				if (this.lockingTarget === potentialTarget) {
+					this.lockTime += dt;
+					if (this.lockTime >= this.lockRequiredTime) {
+						this.lockStatus = 'LOCKED';
+						this.target = potentialTarget;
+					} else {
+						this.lockStatus = 'LOCKING';
+					}
 				} else {
+					this.lockingTarget = potentialTarget;
+					this.lockTime = 0;
 					this.lockStatus = 'LOCKING';
+					this.target = null;
 				}
 			} else {
-				this.lockingTarget = potentialTarget;
+				this.lockingTarget = null;
 				this.lockTime = 0;
-				this.lockStatus = 'LOCKING';
+				this.lockStatus = 'NONE';
 				this.target = null;
 			}
 		} else {
@@ -186,20 +195,17 @@ export class WeaponSystem {
 					soundManager.play('rwr-tws');
 				}
 			} else {
-				// ensure TWS loop is stopped whenever not LOCKING
 				if (soundManager.isPlaying('rwr-tws')) {
-					soundManager.stop('rwr-tws', 0.05);
+					soundManager.stop('rwr-tws');
 				}
 			}
 
-			// play lock tone once when transitioning into LOCKED
 			if (prevLockStatus !== this.lockStatus && this.lockStatus === 'LOCKED') {
 				soundManager.play('rwr-lock');
 			}
-			// stop the lock tone if we just lost LOCKED status
 			if (prevLockStatus === 'LOCKED' && this.lockStatus !== 'LOCKED') {
 				if (soundManager.isPlaying('rwr-lock')) {
-					soundManager.stop('rwr-lock', 0.05);
+					soundManager.stop('rwr-lock');
 				}
 			}
 		} catch (e) { }

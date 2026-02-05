@@ -44,8 +44,6 @@ export class PlaneController {
 			cameraPitch: 0,
 			isDragging: false,
 			fire: false,
-			fireGun: false,
-			fireMissile: false,
 			fireFlare: false,
 			weaponIndex: -1,
 			toggleWeapon: false
@@ -63,8 +61,6 @@ export class PlaneController {
 		this.input.isDragging = this.mouseDragging;
 		
 		this.input.fire = !!this.keys['enter'] || !!this.keys['f'];
-		this.input.fireGun = !!this.keys['shift'];
-		this.input.fireMissile = !!this.keys['control'];
 		this.input.fireFlare = !!this.keys['v'];
 		
 		this.input.toggleWeapon = (!!this.keys['q'] && !this.prevKeys['q']);
