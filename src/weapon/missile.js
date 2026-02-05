@@ -37,35 +37,106 @@ export class Missile {
 
 		this.mesh = new THREE.Group();
 
-		const bodyGeom = new THREE.CylinderGeometry(0.12, 0.12, 2.2, 12);
-		bodyGeom.translate(0, -1.1, 0);
-		const bodyMat = new THREE.MeshStandardMaterial({ color: 0xbfbfbf, metalness: 0.6, roughness: 0.4 });
+
+		const bodyLen = 2.6;
+		const radius = 0.07;
+		const bodyGeom = new THREE.CylinderGeometry(radius, radius, bodyLen, 16);
+		const bodyMat = new THREE.MeshStandardMaterial({
+			color: 0xcccccc,
+			metalness: 0.4,
+			roughness: 0.5
+		});
 		const body = new THREE.Mesh(bodyGeom, bodyMat);
 		this.mesh.add(body);
 
-		const noseGeom = new THREE.ConeGeometry(0.12, 0.6, 12);
-		noseGeom.translate(0, 0.45, 0);
-		const noseMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.7, roughness: 0.25 });
+		const noseLen = 0.35;
+		const noseGeom = new THREE.ConeGeometry(radius, noseLen, 16);
+		noseGeom.translate(0, bodyLen / 2 + noseLen / 2, 0);
+		const noseMat = new THREE.MeshStandardMaterial({
+			color: 0x333333,
+			metalness: 0.8,
+			roughness: 0.3
+		});
 		const nose = new THREE.Mesh(noseGeom, noseMat);
-		nose.position.set(0, 0.9, 0);
 		this.mesh.add(nose);
 
+		const bandGeom = new THREE.CylinderGeometry(radius + 0.001, radius + 0.001, 0.15, 16);
+		bandGeom.translate(0, bodyLen / 2 - 0.4, 0);
+		const bandMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+		const band = new THREE.Mesh(bandGeom, bandMat);
+		this.mesh.add(band);
+
+		const finMat = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.3, roughness: 0.6 });
+
+		const tailFinShape = new THREE.Shape();
+		tailFinShape.moveTo(0, 0);
+		tailFinShape.lineTo(0.4, -0.2);
+		tailFinShape.lineTo(0.4, -0.5);
+		tailFinShape.lineTo(0, -0.5);
+		tailFinShape.lineTo(0, 0);
+
+		const tailFinGeom = new THREE.ExtrudeGeometry(tailFinShape, { depth: 0.02, bevelEnabled: false });
+		tailFinGeom.center();
+		tailFinGeom.translate(0.2, -0.25, 0);
+
+		const rearFinGeom = new THREE.BoxGeometry(0.35, 0.4, 0.02);
+		rearFinGeom.translate(radius + 0.175, 0, 0);
+
 		for (let i = 0; i < 4; i++) {
-			const finGeom = new THREE.BoxGeometry(0.02, 0.3, 0.6);
-			const finMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.2, roughness: 0.7 });
-			const fin = new THREE.Mesh(finGeom, finMat);
-			fin.position.set(0, -0.8, 0.45);
-			fin.rotateX(Math.PI / 2);
-			fin.rotateY(i * Math.PI / 2);
-			this.mesh.add(fin);
+			const finGroup = new THREE.Group();
+			const finMesh = new THREE.Mesh(rearFinGeom, finMat);
+			finGroup.add(finMesh);
+
+			finGroup.position.y = -bodyLen / 2 + 0.3;
+			finGroup.rotation.y = i * (Math.PI / 2);
+
+
+			this.mesh.add(finGroup);
 		}
 
-		const flameColor = new THREE.Color(1.0, 0.65, 0.12);
-		const flameGeom = new THREE.SphereGeometry(0.26, 10, 10);
-		const flameMat = new THREE.MeshBasicMaterial({ color: flameColor, transparent: true, opacity: 0.95 });
-		const flame = new THREE.Mesh(flameGeom, flameMat);
-		flame.position.set(0, -1.6, 0);
-		this.mesh.add(flame);
+		const frontFinGeom = new THREE.BoxGeometry(0.2, 0.15, 0.015);
+		frontFinGeom.translate(radius + 0.1, 0, 0);
+
+		for (let i = 0; i < 4; i++) {
+			const finGroup = new THREE.Group();
+			const finMesh = new THREE.Mesh(frontFinGeom, finMat);
+			finGroup.add(finMesh);
+			finGroup.position.y = bodyLen / 2 - 0.6;
+			finGroup.rotation.y = i * (Math.PI / 2);
+			this.mesh.add(finGroup);
+		}
+
+		const flameColor = new THREE.Color(1.0, 0.6, 0.2);
+
+		const flameGeom = new THREE.ConeGeometry(radius * 0.9, 1.0, 16, 1, true);
+		flameGeom.rotateX(Math.PI);
+		flameGeom.translate(0, -0.5, 0);
+
+		const flameMat = new THREE.MeshBasicMaterial({
+			color: flameColor,
+			transparent: true,
+			opacity: 0.8,
+			side: THREE.DoubleSide,
+			depthWrite: false,
+			blending: THREE.AdditiveBlending
+		});
+		this.flameMesh = new THREE.Mesh(flameGeom, flameMat);
+		this.flameMesh.position.y = -bodyLen / 2;
+		this.mesh.add(this.flameMesh);
+
+		const coreGeom = new THREE.ConeGeometry(radius * 0.5, 0.6, 16, 1, true);
+		coreGeom.rotateX(Math.PI);
+		coreGeom.translate(0, -0.3, 0);
+		const coreMat = new THREE.MeshBasicMaterial({
+			color: 0xffffff,
+			transparent: true,
+			opacity: 0.9,
+			side: THREE.DoubleSide,
+			depthWrite: false,
+			blending: THREE.AdditiveBlending
+		});
+		this.flameCore = new THREE.Mesh(coreGeom, coreMat);
+		this.flameMesh.add(this.flameCore);
 
 		this.mesh.layers.enable(0);
 		this.mesh.layers.enable(1);
@@ -80,6 +151,18 @@ export class Missile {
 				this.updateTrail(dt);
 			}
 			return;
+		}
+
+		if (this.flameMesh) {
+			const flicker = 0.8 + Math.random() * 0.4;
+			const flickerLen = 0.9 + Math.random() * 0.2;
+
+			this.flameMesh.scale.set(flicker, flickerLen, flicker);
+			this.flameMesh.material.opacity = 0.7 + Math.random() * 0.3;
+
+			if (this.flameCore) {
+				this.flameCore.scale.set(flicker, flickerLen, flicker);
+			}
 		}
 
 		this.life -= dt;
@@ -141,7 +224,7 @@ export class Missile {
 		if (this.active && now - this.lastTrailSpawn > 5) {
 			this.lastTrailSpawn = now;
 
-			const smokeGeom = new THREE.SphereGeometry(1.2, 16, 16);
+			const smokeGeom = new THREE.SphereGeometry(0.5, 16, 16);
 			const gray = 0.5 + Math.random() * 0.75;
 			const smokeMat = new THREE.MeshBasicMaterial({
 				color: new THREE.Color(gray, gray, gray),
@@ -171,7 +254,9 @@ export class Missile {
 			}
 
 			if (!t.randomScale) t.randomScale = 0.8 + Math.random() * 0.5;
-			const scale = t.randomScale * (1.0 + (1.0 - t.life / t.maxLife) * 15.0);
+
+			const ageFactor = 1.0 - (t.life / t.maxLife);
+			const scale = t.randomScale * (0.2 + ageFactor * 25.0);
 			t.scale.set(scale, scale, scale);
 
 			const opacity = (t.life / t.maxLife) * 0.5;

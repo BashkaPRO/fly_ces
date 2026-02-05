@@ -35,6 +35,8 @@ export class WeaponSystem {
 		this.flareQueue = 0;
 		this.flareInterval = 0.15;
 		this.lastFlarePulse = 0;
+
+		this.lastMissileSide = false;
 	}
 
 	resetAmmo() {
@@ -60,6 +62,50 @@ export class WeaponSystem {
 		if (index >= 0 && index < this.weapons.length) {
 			this.selectedWeaponIndex = index;
 		}
+	}
+
+	calculateWeaponPos(offset) {
+		if (!this.playerModel || !this.viewer) return null;
+
+		const scale = this.playerModel.scale.x;
+		const scaledOffset = offset.clone().multiplyScalar(scale);
+
+		scaledOffset.applyQuaternion(this.playerModel.quaternion);
+		scaledOffset.add(this.playerModel.position);
+
+		const planeFov = 75;
+		const worldFov = Cesium.Math.toDegrees(this.viewer.camera.frustum.fovy);
+
+		const factor = Math.tan(Cesium.Math.toRadians(worldFov) * 0.5) / Math.tan(Cesium.Math.toRadians(planeFov) * 0.5);
+
+		scaledOffset.x *= factor;
+		scaledOffset.y *= factor;
+
+		const cam = this.viewer.camera;
+		const right = cam.right;
+		const up = cam.up;
+		const dir = cam.direction;
+
+		const worldOffset = new Cesium.Cartesian3();
+
+		const xVec = Cesium.Cartesian3.multiplyByScalar(right, scaledOffset.x, new Cesium.Cartesian3());
+		const yVec = Cesium.Cartesian3.multiplyByScalar(up, scaledOffset.y, new Cesium.Cartesian3());
+		const zVec = Cesium.Cartesian3.multiplyByScalar(dir, -scaledOffset.z, new Cesium.Cartesian3());
+
+		Cesium.Cartesian3.add(xVec, yVec, worldOffset);
+		Cesium.Cartesian3.add(worldOffset, zVec, worldOffset);
+
+		const camPos = cam.positionWC;
+		const finalPos = new Cesium.Cartesian3();
+		Cesium.Cartesian3.add(camPos, worldOffset, finalPos);
+
+		const carto = Cesium.Cartographic.fromCartesian(finalPos);
+
+		return {
+			lon: Cesium.Math.toDegrees(carto.longitude),
+			lat: Cesium.Math.toDegrees(carto.latitude),
+			alt: carto.height
+		};
 	}
 
 	fire(playerState, specificWeaponId = null) {
@@ -94,7 +140,8 @@ export class WeaponSystem {
 				this.isGunOverheated = true;
 			}
 
-			const nosePos = movePosition(startPos.lon, startPos.lat, startPos.alt, playerState.heading, playerState.pitch, 5);
+			const gunOffset = new THREE.Vector3(0, -3.0, 0.0);
+			const nosePos = this.calculateWeaponPos(gunOffset) || movePosition(startPos.lon, startPos.lat, startPos.alt, playerState.heading, playerState.pitch, 5);
 
 			const bullet = new Bullet(
 				this.scene,
@@ -106,11 +153,17 @@ export class WeaponSystem {
 			);
 			this.projectiles.push(bullet);
 		} else if (weapon.id === 'missile') {
+			this.lastMissileSide = !this.lastMissileSide;
+			const side = this.lastMissileSide ? 1 : -1;
+			const missileOffset = new THREE.Vector3(15.0 * side, -15.0, 0.0);
+
+			const launchPos = this.calculateWeaponPos(missileOffset) || startPos;
+
 			const target = this.target;
 			const missile = new Missile(
 				this.scene,
 				this.viewer,
-				startPos,
+				launchPos,
 				playerState.heading,
 				playerState.pitch,
 				playerState.speed,
@@ -136,7 +189,8 @@ export class WeaponSystem {
 	}
 
 	_spawnSingleFlare(playerState) {
-		const startPos = {
+		const flareOffset = new THREE.Vector3(0, -10.0, 6.0);
+		const startPos = this.calculateWeaponPos(flareOffset) || {
 			lon: playerState.lon,
 			lat: playerState.lat,
 			alt: playerState.alt
