@@ -62,9 +62,72 @@ export class HUD {
 		this.uiContainer.appendChild(this.npcContainer);
 
 		this.createHorizon();
+		this.createMissileCrosshair();
 		this.createCompass();
 		this.resizeMinimap();
 		window.addEventListener('resize', () => this.resizeMinimap());
+	}
+
+	createMissileCrosshair() {
+		if (document.getElementById('missile-crosshair')) return;
+
+		const cross = document.createElement('div');
+		cross.id = 'missile-crosshair';
+		cross.style.cssText = `
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			width: 220px;
+			height: 220px;
+			display: none;
+		`;
+
+		const innerRing = document.createElement('div');
+		innerRing.style.cssText = `
+			position:absolute; left:50%; top:50%; width:76px; height:76px; transform:translate(-50%,-50%);
+			border-radius:50%;
+			border:2px solid #0f0;
+		`;
+
+		const centerDot = document.createElement('div');
+		centerDot.style.cssText = `position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:10px; height:10px; border-radius:50%; background:#0f0;`;
+
+		const makeTick = (left, top, w, h, translate) => {
+			const t = document.createElement('div');
+			t.style.cssText = `position:absolute; left:${left}; top:${top}; width:${w}; height:${h}; background:#0f0; transform:${translate};`;
+			return t;
+		};
+
+		const tickOffset = 48;
+		const tickLen = 18;
+
+		const leftTick = makeTick('calc(50% - ' + tickOffset + 'px - ' + (tickLen / 2) + 'px)', '50%', '18px', '2px', 'translateY(-50%)');
+		const rightTick = makeTick('calc(50% + ' + tickOffset + 'px - ' + (tickLen / 2) + 'px)', '50%', '18px', '2px', 'translateY(-50%)');
+		const topTick = makeTick('50%', 'calc(50% - ' + tickOffset + 'px - ' + (tickLen / 2) + 'px)', '2px', tickLen + 'px', 'translateX(-50%)');
+
+		cross.appendChild(innerRing);
+		cross.appendChild(centerDot);
+		cross.appendChild(topTick);
+		cross.appendChild(leftTick);
+		cross.appendChild(rightTick);
+
+		const horizon = document.getElementById('horizon-container');
+		if (horizon) horizon.appendChild(cross);
+		else this.uiContainer.appendChild(cross);
+		this.missileCrosshair = cross;
+	}
+
+	showMissileCrosshair(shouldShow) {
+		if (!this.missileCrosshair) return;
+		const normal = document.getElementById('normal-crosshair');
+		if (shouldShow) {
+			if (normal) normal.style.display = 'none';
+			this.missileCrosshair.style.display = 'block';
+		} else {
+			this.missileCrosshair.style.display = 'none';
+			if (normal) normal.style.display = 'flex';
+		}
 	}
 
 	createCompass() {
@@ -178,6 +241,7 @@ export class HUD {
 			`;
 
 			const crosshair = document.createElement('div');
+			crosshair.id = 'normal-crosshair';
 			crosshair.style.cssText = 'position:absolute; top:50%; left:50%; width:120px; height:48px; transform:translate(-50%,-50%); pointer-events:none;';
 
 			const ring = document.createElement('div');
@@ -691,6 +755,13 @@ export class HUD {
 	updateWeapons(weaponSystem) {
 		const currentWeapon = weaponSystem.getCurrentWeapon();
 		const now = performance.now() * 0.001;
+
+		const isMissileSelected = !!currentWeapon && (
+			currentWeapon.id === 'missile' ||
+			currentWeapon.id === 'aim-9' ||
+			(currentWeapon.name && currentWeapon.name.toLowerCase().includes('aim-9'))
+		);
+		this.showMissileCrosshair(isMissileSelected);
 
 		['gun', 'missile', 'flare'].forEach(id => {
 			const elem = this.weaponElems[id];
