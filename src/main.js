@@ -248,7 +248,7 @@ async function initSounds() {
 		soundManager.loadSound('m61-firing', '/assets/sounds/m61-firing.mp3', true, 0.6),
 		soundManager.loadSound('rwr-tws', '/assets/sounds/rwr-tws.mp3', true, 0.2),
 		soundManager.loadSound('rwr-lock', '/assets/sounds/rwr-lock.mp3', false, 0.2),
-		soundManager.loadSound('wind', '/assets/sounds/wind.mp3', true, 0.35),
+		soundManager.loadSound('wind', '/assets/sounds/wind.mp3', true, 0.25),
 		soundManager.loadSound('terrain-pull-up', '/assets/sounds/terrain-pull-up.mp3', false, 0.9),
 		soundManager.loadSound('warning', '/assets/sounds/warning.wav', false, 0.6)
 	]);
