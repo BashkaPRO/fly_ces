@@ -763,6 +763,10 @@ function setupModalListeners() {
 		document.getElementById('optionsModal').classList.remove('hidden');
 	};
 
+	document.getElementById('pauseHelpBtn').onclick = () => {
+		document.getElementById('helpModal').classList.remove('hidden');
+	};
+
 	document.getElementById('creditsBtn').onclick = () => {
 		closeAllModals();
 		document.getElementById('creditsModal').classList.remove('hidden');
@@ -905,6 +909,7 @@ function exitSpawnPicking() {
 	confirmSpawnBtn.classList.add('hidden');
 	mainMenu.classList.remove('hidden');
 	currentState = States.MENU;
+	loadingIndicator.classList.add('hidden');
 	setRenderOptimization(true);
 
 	setControlsEnabled(false);
@@ -1283,8 +1288,11 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener((queueLength) => {
 			} else {
 				loadingIndicator.classList.add('hidden');
 			}
-		} else if (currentState === States.FLYING || currentState === States.TRANSITIONING) {
-			loadingIndicator.classList.add('hidden');
+		} else {
+			const isAllLoaded = loadingStatus.audio && loadingStatus.model && loadingStatus.cesium && loadingStatus.globe;
+			if (isAllLoaded) {
+				loadingIndicator.classList.add('hidden');
+			}
 		}
 	}
 });

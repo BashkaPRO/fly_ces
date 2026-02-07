@@ -890,7 +890,7 @@ input[type="range"]::-webkit-slider-thumb {
 	border-top: 3px solid #0f0;
 	border-radius: 50%;
 	animation: spin 1s linear infinite;
-	filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 2px #000) drop-shadow(0 0 5px #0f0);
+	filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 5px #0f0);
 }
 
 
@@ -1080,13 +1080,13 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 #weapons-hud {
-    position: absolute;
-    bottom: 30px;
-    right: 30px;
-    display: flex;
-    align-items: stretch;
-    pointer-events: none;
-    gap: 10px;
+	position: absolute;
+	bottom: 30px;
+	right: 30px;
+	display: flex;
+	align-items: stretch;
+	pointer-events: none;
+	gap: 10px;
 }
 
 #weapon-list {
@@ -1126,7 +1126,8 @@ input[type="range"]::-webkit-slider-thumb {
 	background: rgba(255, 0, 0, 0.3);
 }
 
-.weapon-name, .weapon-ammo {
+.weapon-name,
+.weapon-ammo {
 	position: relative;
 	z-index: 1;
 }
@@ -1171,7 +1172,7 @@ input[type="range"]::-webkit-slider-thumb {
 	width: auto;
 	height: calc(100% - 20px);
 	max-width: 100%;
-	filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 8px rgba(0,255,0,0.6));
+	filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%) drop-shadow(0 0 8px rgba(0, 255, 0, 0.6));
 }
 
 #aircraft-label {

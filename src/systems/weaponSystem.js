@@ -47,6 +47,7 @@ export class WeaponSystem {
 	}
 
 	resetAmmo() {
+		this.selectedWeaponIndex = 0;
 		for (const w of this.weapons) {
 			if (typeof w.maxAmmo !== 'undefined') w.ammo = w.maxAmmo;
 		}
