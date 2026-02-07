@@ -55,9 +55,7 @@ export class Bullet {
 						vec3 a = mix(colorStart, colorMid, smoothstep(0.0, 0.5, t));
 						vec3 b = mix(colorMid, colorEnd, smoothstep(0.5, 1.0, t));
 						vec3 col = mix(a, b, smoothstep(0.0, 1.0, t));
-						// Fade out towards the tail (uv.y -> 0)
 						float alpha = opacity * pow(t, 0.6) * intensity;
-						// Soft edge horizontally
 						float edge = 1.0 - smoothstep(0.0, 0.5, abs(vUv.x - 0.5) * 2.0);
 						alpha *= edge;
 						gl_FragColor = vec4(col, alpha);

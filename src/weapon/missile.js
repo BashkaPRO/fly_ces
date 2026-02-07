@@ -138,8 +138,6 @@ export class Missile {
 		this.flameCore = new THREE.Mesh(coreGeom, coreMat);
 		this.flameMesh.add(this.flameCore);
 
-		// Add a camera-facing glow sprite so the flame remains visible at long distance
-		// Use a canvas radial gradient texture to get a warm fire color
 		const canvSize = 128;
 		const canv = (typeof document !== 'undefined') ? document.createElement('canvas') : null;
 		let glowTexture = null;
@@ -358,15 +356,12 @@ export class Missile {
 		this.mesh.matrix.copy(this._scratchThreeMatrix);
 		this.mesh.updateMatrixWorld(true);
 
-		// make flame glow sprite scale with camera distance so it's visible from far away
 		if (this.flameGlow && this.viewer && this.viewer.camera && this.viewer.camera.position) {
 			try {
 				const camPos = this.viewer.camera.position;
 				const dist = Cesium.Cartesian3.distance(pos, camPos) || 1.0;
-				// scale in world-space units (tuned experimentally)
 				const s = THREE.MathUtils.clamp(dist * 0.0016, 1.0, 80.0);
 				this.flameGlow.scale.set(s, s, 1.0);
-				// keep sprite always rendered on top-ish
 				this.flameGlow.renderOrder = 9999;
 				if (this.flameGlow.material) this.flameGlow.material.opacity = Math.max(0.25, Math.min(1.0, 80.0 / s));
 			} catch (e) { }
@@ -385,7 +380,7 @@ export class Missile {
 		try {
 			particles.spawnExplosion(this.lon, this.lat, this.alt, { count: 80, smokeCount: 18, big: true });
 			particles.spawnWreckage(this.lon, this.lat, this.alt, this.heading, this.pitch, { count: 48 });
-				soundManager.play('explode-random');
+			soundManager.play('explode-random');
 		} catch (e) { }
 		this.destroy();
 	}

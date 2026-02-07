@@ -56,22 +56,21 @@ export class Flare {
 	_initAssets() {
 		this.coreTex = makeSpriteTexture('#ffffff', '#ffeecc');
 		this.glowTex = makeSpriteTexture('#ffddaa', '#ff9933');
-		this.smokeTex = (function(){
+		this.smokeTex = (function () {
 			const size = 128;
 			const c = document.createElement('canvas');
 			c.width = size; c.height = size;
 			const ctx = c.getContext('2d');
-			const g = ctx.createRadialGradient(size/2,size/2,2,size/2,size/2,size/1.2);
-			g.addColorStop(0,'rgba(200,200,200,0.9)');
-			g.addColorStop(0.4,'rgba(180,180,180,0.5)');
-			g.addColorStop(1,'rgba(0,0,0,0)');
-			ctx.fillStyle = g; ctx.fillRect(0,0,size,size);
+			const g = ctx.createRadialGradient(size / 2, size / 2, 2, size / 2, size / 2, size / 1.2);
+			g.addColorStop(0, 'rgba(200,200,200,0.9)');
+			g.addColorStop(0.4, 'rgba(180,180,180,0.5)');
+			g.addColorStop(1, 'rgba(0,0,0,0)');
+			ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
 			const t = new THREE.CanvasTexture(c); t.needsUpdate = true; return t;
 		})();
 	}
 
 	initMesh() {
-		// Group to hold the core and glow; we'll set its camera-space matrix each frame
 		this.group = new THREE.Group();
 		this.group.matrixAutoUpdate = false;
 
@@ -85,12 +84,10 @@ export class Flare {
 		const glow = new THREE.Sprite(glowMat);
 		glow.scale.set(3.0, 3.0, 1.0);
 		this.glow = glow;
-		// add glow behind core for render ordering
 		this.group.add(glow);
 
 		this.scene.add(this.group);
 
-		// Preallocate a pooled set of smoke sprites for the trail
 		for (let i = 0; i < 80; i++) {
 			const mat = new THREE.SpriteMaterial({ map: this.smokeTex, color: 0xcccccc, transparent: true, opacity: 0, depthWrite: false });
 			const s = new THREE.Sprite(mat);
@@ -98,7 +95,6 @@ export class Flare {
 			s.matrixAutoUpdate = false;
 			s._poolIndex = i;
 			this.trailPool.push(s);
-			// add to scene but invisible initially
 			this.scene.add(s);
 		}
 	}
@@ -195,7 +191,6 @@ export class Flare {
 		if (now - this.lastTrailSpawn < 25) return;
 		this.lastTrailSpawn = now;
 
-		// pull one from pool
 		const s = this.trailPool.find(sp => sp.material.opacity === 0);
 		if (!s) return;
 		s._lon = this.lon;
@@ -231,7 +226,6 @@ export class Flare {
 			t.matrix.copy(this._scratchThreeMatrix);
 			t.updateMatrixWorld(true);
 
-			// slowly drift smoke downwards in local ENU
 			t._alt -= 0.2 * (1 - lifeRatio);
 		}
 	}
