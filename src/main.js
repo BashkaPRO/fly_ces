@@ -885,6 +885,7 @@ function enterSpawnPicking(useVignette = true) {
 		}
 		if (instructionText) {
 			instructionText.style.display = 'block';
+			instructionText.textContent = 'CLICK ANYWHERE ON THE MAP TO CHOOSE SPAWN POINT';
 		}
 		if (resultsContainer) {
 			resultsContainer.style.display = 'none';
@@ -938,6 +939,7 @@ function exitSpawnPicking() {
 function setupSpawnPicker() {
 	const viewer = getViewer();
 	const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+	const instructionText = document.getElementById('instruction-text');
 
 	handler.setInputAction((click) => {
 		if (currentState !== States.PICK_SPAWN) return;
@@ -953,6 +955,17 @@ function setupSpawnPicker() {
 			state.lon = lon;
 			state.lat = lat;
 			state.alt = Math.max(0, cartographic.height) + 1500;
+
+			instructionText.textContent = 'FETCHING LOCATION INFO...';
+
+			reverseGeocode(lon, lat).then(regionName => {
+				if (regionName && currentState === States.PICK_SPAWN) {
+					instructionText.textContent = regionName;
+					if (spawnMarker) {
+						spawnMarker.label.text = regionName;
+					}
+				}
+			}).catch(() => { });
 
 			Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, [cartographic])
 				.then(([p]) => state.alt = Math.max(0, p.height || 0) + 1500)
@@ -1087,6 +1100,7 @@ function setupLocationSearch() {
 
 							searchInput.style.display = 'none';
 							instructionText.style.display = 'block';
+							instructionText.textContent = item.display_name.split(',')[0].toUpperCase();
 							searchInput.value = item.display_name;
 						};
 						resultsContainer.appendChild(div);
