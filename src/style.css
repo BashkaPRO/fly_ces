@@ -979,6 +979,61 @@ input[type="range"]::-webkit-slider-thumb {
 	}
 }
 
+#kill-notification-container {
+	position: absolute;
+	top: 65%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	color: #0f0;
+	text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.5);
+	pointer-events: none;
+	animation: kill-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	z-index: 15;
+}
+
+#kill-text {
+	font-size: 24px;
+	margin-bottom: 5px;
+	color: #0f0;
+}
+
+#kill-score {
+	font-size: 32px;
+	font-weight: bold;
+	color: #0f0;
+}
+
+@keyframes kill-pop {
+	0% {
+		transform: translate(-50%, -50%) scale(0.5);
+		opacity: 0;
+	}
+
+	100% {
+		transform: translate(-50%, -50%) scale(1);
+		opacity: 1;
+	}
+}
+
+@keyframes kill-out {
+	0% {
+		transform: translate(-50%, -50%) scale(1);
+		opacity: 1;
+		filter: blur(0);
+	}
+
+	100% {
+		transform: translate(-50%, -60%) scale(1.2);
+		opacity: 0;
+		filter: blur(10px);
+	}
+}
+
+.kill-notification-exit {
+	animation: kill-out 0.5s ease-in forwards !important;
+}
+
 .region-exit {
 	animation: region-out 1s ease-in forwards !important;
 }

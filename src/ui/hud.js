@@ -7,7 +7,7 @@ export class HUD {
 		this.speedElem = document.getElementById('speed');
 		this.altElem = document.getElementById('altitude');
 		this.timeElem = document.getElementById('time');
-		this.aircraftElem = document.getElementById('aircraft');
+		this.scoreElem = document.getElementById('score');
 		this.fpsElem = document.getElementById('fps');
 		this.localDateTimeElem = document.getElementById('local-datetime');
 		this.coordsElem = document.getElementById('coords');
@@ -22,6 +22,11 @@ export class HUD {
 		this.regionTimeout = null;
 
 		this.pullUpElem = document.getElementById('pull-up-warning');
+
+		this.killNotifContainer = document.getElementById('kill-notification-container');
+		this.killTextElem = document.getElementById('kill-text');
+		this.killScoreElem = document.getElementById('kill-score');
+		this.killTimeout = null;
 
 		this.weaponElems = {
 			gun: document.getElementById('weapon-gun'),
@@ -183,6 +188,66 @@ export class HUD {
 		const lines = document.getElementById('pitch-lines');
 		if (lines) {
 			lines.style.display = show ? 'block' : 'none';
+		}
+	}
+
+	showKillNotification(npcName, scoreGain) {
+		if (this.killTimeout) clearTimeout(this.killTimeout);
+
+		if (this.killNotifContainer) {
+			this.killNotifContainer.classList.remove('hidden');
+			this.killNotifContainer.classList.remove('kill-notification-exit');
+
+			const targetText = `${npcName} DESTROYED`;
+			const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()';
+			let iteration = 0;
+			if (this.glitchInterval) clearInterval(this.glitchInterval);
+
+			this.glitchInterval = setInterval(() => {
+				if (this.killTextElem) {
+					// Typing effect with a glitchy "edge" character and a cursor
+					const currentPos = Math.floor(iteration);
+					
+					const processedText = targetText.split("")
+						.map((char, index) => {
+							if (index < currentPos) return targetText[index]; // Correct character
+							if (index === currentPos) return chars[Math.floor(Math.random() * chars.length)]; // Glitch char
+							return ""; // Hidden
+						})
+						.join("");
+					
+					// Add a blinking cursor or indicator while typing
+					const cursor = currentPos < targetText.length ? (Math.random() > 0.5 ? "_" : " ") : "";
+					this.killTextElem.innerText = processedText + cursor;
+				}
+
+				if (iteration >= targetText.length) {
+					if (this.killTextElem) this.killTextElem.innerText = targetText;
+					clearInterval(this.glitchInterval);
+				}
+
+				iteration += 1;
+			}, 40);
+
+			if (this.killScoreElem) this.killScoreElem.innerText = `+${scoreGain}`;
+
+			// Reset animation
+			this.killNotifContainer.style.animation = 'none';
+			this.killNotifContainer.offsetHeight; // trigger reflow
+			this.killNotifContainer.style.animation = null;
+
+			this.killTimeout = setTimeout(() => {
+				// Start exit animation
+				this.killNotifContainer.classList.add('kill-notification-exit');
+				
+				// Hide after animation finishes
+				setTimeout(() => {
+					this.killNotifContainer.classList.add('hidden');
+					this.killNotifContainer.classList.remove('kill-notification-exit');
+				}, 500);
+
+				if (this.glitchInterval) clearInterval(this.glitchInterval);
+			}, 3000);
 		}
 	}
 
@@ -407,6 +472,10 @@ export class HUD {
 
 		const altFeet = Math.max(0, Math.round(state.alt * 3.28084));
 		this.altElem.innerText = altFeet.toString().padStart(5, '0');
+
+		if (this.scoreElem) {
+			this.scoreElem.innerText = (state.score || 0).toString().padStart(6, '0');
+		}
 
 		const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
 		const h = Math.floor(elapsed / 3600);

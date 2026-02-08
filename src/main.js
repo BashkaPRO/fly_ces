@@ -126,6 +126,7 @@ let state = {
 	roll: 0,
 	speed: 0,
 	throttle: 0,
+	score: 0,
 	weaponSystem: null
 };
 
@@ -360,6 +361,12 @@ function initThree() {
 		jetFlames.push(flameL, flameR);
 
 		weaponSystem = new WeaponSystem(getViewer(), scene, planeModel);
+		weaponSystem.onKill = (npc) => {
+			state.score += 1000;
+			if (hud) {
+				hud.showKillNotification(npc.name, 1000);
+			}
+		};
 
 		planeModel.traverse(child => {
 			child.layers.set(1);
@@ -849,6 +856,7 @@ document.getElementById('respawnBtn').onclick = () => {
 };
 
 function enterSpawnPicking(useVignette = true) {
+	state.score = 0;
 	if (npcSystem) npcSystem.clear();
 	stopAllFlyingSounds(0.3);
 	soundManager.play('zoom-in');

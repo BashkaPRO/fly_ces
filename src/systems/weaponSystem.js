@@ -22,6 +22,7 @@ export class WeaponSystem {
 		this.selectedWeaponIndex = 0;
 		this.projectiles = [];
 		this.flares = [];
+		this.onKill = null;
 
 		this.target = null;
 		this.isGunOverheated = false;
@@ -173,7 +174,8 @@ export class WeaponSystem {
 				nosePos,
 				playerState.heading,
 				playerState.pitch,
-				playerState.speed
+				playerState.speed,
+				this.onKill
 			);
 			this.projectiles.push(bullet);
 		} else if (weapon.id === 'missile') {
@@ -191,7 +193,8 @@ export class WeaponSystem {
 				playerState.heading,
 				playerState.pitch,
 				playerState.speed,
-				target
+				target,
+				this.onKill
 			);
 			this.projectiles.push(missile);
 

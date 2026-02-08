@@ -5,9 +5,10 @@ import { particles } from '../utils/particles';
 import { soundManager } from '../utils/soundManager';
 
 export class Bullet {
-	constructor(scene, viewer, startPos, heading, pitch, speed) {
+	constructor(scene, viewer, startPos, heading, pitch, speed, onKill = null) {
 		this.scene = scene;
 		this.viewer = viewer;
+		this.onKill = onKill;
 
 		this.lon = startPos.lon;
 		this.lat = startPos.lat;
@@ -181,6 +182,7 @@ export class Bullet {
 
 	hitNPC(npc) {
 		npc.destroyed = true;
+		if (this.onKill) this.onKill(npc);
 		try {
 			particles.spawnExplosion(this.lon, this.lat, this.alt, { count: 36, smokeCount: 8, big: true });
 			particles.spawnWreckage(this.lon, this.lat, this.alt, this.heading, this.pitch, { count: 18 });
