@@ -62,7 +62,7 @@ export class NPCSystem {
 		const model = this.modelTemplate.clone();
 
 		model.rotation.x = Math.PI / 2;
-		model.scale.set(0.1, 0.1, 0.1);
+		model.scale.set(1.0, 1.0, 1.0);
 
 		group.add(model);
 		group.matrixAutoUpdate = false;
@@ -142,10 +142,25 @@ export class NPCSystem {
 			let headingDiff = npc.targetHeading - npc.heading;
 			while (headingDiff < -180) headingDiff += 360;
 			while (headingDiff > 180) headingDiff -= 360;
-			npc.heading += headingDiff * dt * 0.5;
-			npc.pitch += (npc.targetPitch - npc.pitch) * dt * 0.4;
-			npc.roll = -headingDiff * 2.5;
-			npc.roll = Math.max(-70, Math.min(70, npc.roll));
+
+			const baseTurnRate = 30;
+			const boostTurnRate = 90;
+			const maxTurnRate = npc.isBoosting ? boostTurnRate : baseTurnRate;
+			const maxTurnThisStep = maxTurnRate * dt;
+			const headingChange = Math.max(-maxTurnThisStep, Math.min(maxTurnThisStep, headingDiff));
+			npc.heading = (npc.heading + headingChange + 360) % 360;
+
+			npc.pitch += (npc.targetPitch - npc.pitch) * dt * 0.6;
+
+			let desiredRoll = 0;
+			if (Math.abs(headingDiff) > 0.5) {
+				const turnDir = Math.sign(headingDiff);
+				const intensity = Math.min(1, Math.abs(headingDiff) / 45);
+				desiredRoll = -turnDir * 90 * intensity;
+			}
+			const rollLerpSpeed = 3.0;
+			npc.roll += (desiredRoll - npc.roll) * Math.min(1, dt * rollLerpSpeed);
+			npc.roll = Math.max(-90, Math.min(90, npc.roll));
 
 			const newPos = movePosition(npc.lon, npc.lat, npc.alt, npc.heading, npc.pitch, npc.speed * dt);
 			npc.lon = newPos.lon;
@@ -155,8 +170,8 @@ export class NPCSystem {
 			const pos = Cesium.Cartesian3.fromDegrees(npc.lon, npc.lat, npc.alt, undefined, this._scratchCartesian);
 
 			this._scratchHPR.heading = Cesium.Math.toRadians(npc.heading);
-			this._scratchHPR.pitch = Cesium.Math.toRadians(npc.pitch);
-			this._scratchHPR.roll = Cesium.Math.toRadians(npc.roll);
+			this._scratchHPR.pitch = Cesium.Math.toRadians(npc.roll);
+			this._scratchHPR.roll = Cesium.Math.toRadians(npc.pitch);
 
 			const modelMatrix = Cesium.Transforms.headingPitchRollToFixedFrame(
 				pos,
