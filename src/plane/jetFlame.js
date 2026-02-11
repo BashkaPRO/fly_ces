@@ -35,7 +35,7 @@ export class JetFlame {
                 float activeLen = mix(nonBoostLen, boostLen, isBoosting);
 
                 float nonBoostIntensity = 0.6 + throttle * 0.9;
-                float boostIntensity = 2.0;
+                float boostIntensity = 1.4;
                 float intensity = mix(nonBoostIntensity, boostIntensity, isBoosting);
 
                 if (v > activeLen + 0.1) discard;
@@ -55,22 +55,25 @@ export class JetFlame {
                 float core = exp(-radial * 28.0);
                 
                 float shockFreq = 20.0;
-                float shock = pow(max(0.0, sin(v * shockFreq - time * 50.0)), 5.0);
-                shock *= (0.2 + effThrottle * 0.8 + isBoosting * 0.4);
+                float shock = pow(max(0.0, sin(v * shockFreq - time * 50.0)), 4.0);
+                shock *= (0.2 + effThrottle * 0.8 + isBoosting * 0.2);
                 
                 float diamondPos = sin(v * 26.0 - time * 40.0);
-                float diamondMesh = pow(max(0.0, diamondPos), 9.0) * (1.0 - v/activeLen);
+                float diamondMesh = pow(max(0.0, diamondPos), 7.0) * (1.0 - v/activeLen);
 
                 float flicker = 1.0 + 0.18 * noise(vec2(time * 20.0, v * 10.0));
 
                 vec3 finalColor = mix(outerColor * 0.7, midColor, glow);
-                finalColor = mix(finalColor, coreColor, core + diamondMesh * 0.7);
                 
-                finalColor += coreColor * shock * glow;
+                float coreMix = core + diamondMesh * 0.7;
+                vec3 detailColor = mix(coreColor, midColor, isBoosting * 0.3);
+                finalColor = mix(finalColor, detailColor, coreMix);
+                
+                finalColor += detailColor * shock * glow;
 
-                float fade = pow(max(0.0, 1.0 - v / activeLen), 1.4);
+                float fade = pow(max(0.0, 1.0 - v / activeLen), 2.2);
                 
-                float edgeFade = smoothstep(activeLen, activeLen * 0.8, v);
+                float edgeFade = smoothstep(activeLen, activeLen * 0.5, v);
                 
                 float alpha = fade * intensity * (glow * 2.2 + core) * edgeFade;
                 alpha = clamp(alpha * flicker, 0.0, 1.0);
@@ -87,7 +90,7 @@ export class JetFlame {
 
         this.boostFactor = 0;
 
-        const geometry = new THREE.CylinderGeometry(0.1, 0.2, 2, 16, 32, true);
+        const geometry = new THREE.CylinderGeometry(0.15, 0.03, 2, 16, 32, true);
         geometry.translate(0, -1, 0);
         geometry.rotateX(-Math.PI / 2);
 
