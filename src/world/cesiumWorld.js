@@ -1,5 +1,11 @@
 import * as Cesium from 'cesium';
 
+// ====================== CESIUM ION TOKEN ======================
+Cesium.Ion.defaultAccessToken = import.meta.env.VITE_CESIUM_ION_TOKEN;
+// ============================================================
+
+// Дальше идёт остальной код файла (обычно создание viewer и т.д.)
+
 let viewer;
 let miniViewer;
 let pauseMiniViewer;
